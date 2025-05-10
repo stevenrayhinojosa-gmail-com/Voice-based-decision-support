@@ -448,31 +448,44 @@ def analyze_speech_for_decision(speech_text, protocol_id=None, time_period=None,
                 if is_transition_period and any(k in keywords for k in decision_mapping.get(3, {}).get("keywords", {}).get("yes", [])):
                     # During transitions, behavioral issues are more common
                     logger.info("Adjusting confidence due to transition period")
-                    adjusted_confidence *= 1.2
-                    
-                # If noise level is high and keywords suggest a crisis, increase emergency confidence
-                if noise_level_db and noise_level_db > -30:  # -30dB threshold for noisy environments
-                    # In louder environments, safety concerns become more critical
-                    logger.info(f"Considering high noise level ({noise_level_db} dB) in decision making")
-                    if is_emergency:
-                        adjusted_confidence *= 1.1
+                    adjusted_confidence = min(adjusted_confidence * 1.2, 1.0)  # Increase by 20%, max 1.0
                 
+                # Decrease confidence if high noise levels, as they may affect speech recognition
+                if noise_level_db and noise_level_db > -45:
+                    logger.info(f"Adjusting confidence due to high noise level: {noise_level_db}dB")
+                    adjusted_confidence = max(adjusted_confidence * 0.9, 0.1)  # Decrease by 10%, min 0.1
+                
+                # Create serializable dicts to avoid SQLAlchemy JSON errors
+                decision_point_dict = {
+                    "id": current_dp.id,
+                    "question": current_dp.question,
+                    "order": current_dp.order,
+                    "protocol_id": current_dp.protocol_id
+                }
+                
+                selected_option_dict = {
+                    "id": selected_option.id,
+                    "text": selected_option.text,
+                    "is_terminal": selected_option.is_terminal,
+                    "next_decision_id": selected_option.next_decision_id,
+                    "recommendation": selected_option.recommendation if selected_option.is_terminal else None
+                }
+                
+                # Prepare the response
                 response = {
                     "success": True,
-                    "decision_point": current_dp,
-                    "selected_option": selected_option,
+                    "decision_point": decision_point_dict,
+                    "selected_option": selected_option_dict,
                     "is_terminal": selected_option.is_terminal,
                     "next_decision_id": selected_option.next_decision_id,
                     "recommendation": selected_option.recommendation if selected_option.is_terminal else None,
                     "keywords": keywords,
                     "is_emergency": is_emergency,
-                    "matched_intent": best_match,
                     "confidence": adjusted_confidence,
-                    # Include context data in the response
+                    # Include context data
                     "time_period": time_period,
                     "noise_level_db": noise_level_db,
-                    "is_transition_period": is_transition_period,
-                    "context_adjusted": True
+                    "is_transition_period": is_transition_period
                 }
                 
                 # If a context-specific rule was applied, include that information
@@ -488,11 +501,19 @@ def analyze_speech_for_decision(speech_text, protocol_id=None, time_period=None,
                 return response
             else:
                 # Fallback if we couldn't map to a specific option
+                # Serialize decision point to avoid JSON errors
+                decision_point_dict = {
+                    "id": current_dp.id,
+                    "question": current_dp.question,
+                    "order": current_dp.order,
+                    "protocol_id": current_dp.protocol_id
+                }
+                
                 response = {
                     "success": False,
                     "error": f"Could not find option matching intent '{best_match}'",
                     "keywords": keywords,
-                    "decision_point": current_dp,
+                    "decision_point": decision_point_dict,
                     "is_emergency": is_emergency,
                     # Include context data
                     "time_period": time_period,
@@ -540,10 +561,26 @@ def analyze_speech_for_decision(speech_text, protocol_id=None, time_period=None,
                 selected_option = yes_option if positive_count > negative_count else no_option
             
             if selected_option:
+                # Create serializable dicts to avoid SQLAlchemy JSON errors
+                decision_point_dict = {
+                    "id": current_dp.id,
+                    "question": current_dp.question,
+                    "order": current_dp.order,
+                    "protocol_id": current_dp.protocol_id
+                }
+                
+                selected_option_dict = {
+                    "id": selected_option.id,
+                    "text": selected_option.text,
+                    "is_terminal": selected_option.is_terminal,
+                    "next_decision_id": selected_option.next_decision_id,
+                    "recommendation": selected_option.recommendation if selected_option.is_terminal else None
+                }
+                
                 response = {
                     "success": True,
-                    "decision_point": current_dp,
-                    "selected_option": selected_option,
+                    "decision_point": decision_point_dict,
+                    "selected_option": selected_option_dict,
                     "is_terminal": selected_option.is_terminal,
                     "next_decision_id": selected_option.next_decision_id,
                     "recommendation": selected_option.recommendation if selected_option.is_terminal else None,
@@ -567,14 +604,34 @@ def analyze_speech_for_decision(speech_text, protocol_id=None, time_period=None,
                 
                 return response
             else:
+                # Fall back if we don't have clear yes/no options
+                # Return serialized decision point to avoid JSON errors
+                decision_point_dict = {
+                    "id": current_dp.id,
+                    "question": current_dp.question,
+                    "order": current_dp.order,
+                    "protocol_id": current_dp.protocol_id
+                }
+                
                 return {
                     "success": False,
-                    "error": "Could not map speech to decision options",
+                    "error": "Could not find appropriate option for the decision point",
                     "keywords": keywords,
-                    "decision_point": current_dp,
-                    "is_emergency": is_emergency
+                    "decision_point": decision_point_dict,
+                    "is_emergency": is_emergency,
+                    # Include context data
+                    "time_period": time_period,
+                    "noise_level_db": noise_level_db,
+                    "is_transition_period": is_transition_period
                 }
     
     except Exception as e:
         logger.error(f"Error analyzing speech for decision: {str(e)}")
-        return {"success": False, "error": str(e)}
+        return {
+            "success": False,
+            "error": f"Error in speech analysis: {str(e)}",
+            # Include context data even in error responses
+            "time_period": time_period,
+            "noise_level_db": noise_level_db,
+            "is_transition_period": is_transition_period
+        }
