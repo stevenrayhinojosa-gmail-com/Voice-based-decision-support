@@ -4,13 +4,46 @@
 <div class="container py-4">
     <div class="row mb-4">
         <div class="col-md-12">
-            <h1 class="mb-3">Natural Language Query</h1>
-            <p class="lead">Ask a question about a behavioral situation in natural language</p>
+            <h1 class="mb-3">Context-Aware Natural Language Query</h1>
+            <p class="lead">Ask a question about a behavioral situation with context-sensitive recommendations</p>
         </div>
     </div>
 
+    <!-- Current Context Panel -->
+    {% if context %}
+    <div class="row mb-4">
+        <div class="col-lg-8 offset-lg-2">
+            <div class="card bg-info bg-opacity-10 border-info">
+                <div class="card-header bg-info bg-opacity-25 border-info">
+                    <h4 class="mb-0"><i class="fas fa-clock me-2"></i> Current Context</h4>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4 text-center border-end">
+                            <div class="mb-1 fw-bold">Time Period</div>
+                            <div class="badge bg-info rounded-pill fs-6 mb-0">{{ context.time_period }}</div>
+                        </div>
+                        <div class="col-md-4 text-center border-end">
+                            <div class="mb-1 fw-bold">Noise Level</div>
+                            <div class="badge {% if '-' in context.noise_level %}bg-success{% else %}bg-warning{% endif %} rounded-pill fs-6 mb-0">{{ context.noise_level }}</div>
+                        </div>
+                        <div class="col-md-4 text-center">
+                            <div class="mb-1 fw-bold">Transition Period</div>
+                            <div class="badge {% if context.is_transition == 'Yes' %}bg-warning{% else %}bg-success{% endif %} rounded-pill fs-6 mb-0">{{ context.is_transition }}</div>
+                        </div>
+                    </div>
+                    <div class="mt-3 small text-muted text-center">
+                        <i class="fas fa-info-circle me-1"></i> Context information will be used to provide more relevant recommendations
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
     <div class="row">
         <div class="col-lg-8 offset-lg-2">
+            <!-- Query Form -->
             <div class="card shadow mb-4">
                 <div class="card-header bg-primary text-white">
                     <h3 class="mb-0">
@@ -23,21 +56,111 @@
                         <div class="mb-4">
                             <label for="query" class="form-label fw-bold">Your Question:</label>
                             <textarea class="form-control" id="query" name="query" rows="4" 
-                                placeholder="Describe a behavioral situation or ask a question like 'What should I do if a student refuses to follow directions?'" required></textarea>
+                                placeholder="Describe a behavioral situation or ask a question like 'What should I do if a student refuses to follow directions?'"
+                                required>{{ query_text }}</textarea>
                             <div class="form-text">
                                 Be specific about the behavior you're observing and any context that might be relevant
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="setting" class="form-label fw-bold">Setting (Optional):</label>
+                            <select class="form-select" id="setting" name="setting">
+                                <option value="">Select a setting (optional)</option>
+                                <option value="classroom">Classroom</option>
+                                <option value="hallway">Hallway</option>
+                                <option value="cafeteria">Cafeteria</option>
+                                <option value="playground">Playground</option>
+                                <option value="gym">Gymnasium</option>
+                                <option value="library">Library</option>
+                            </select>
+                            <div class="form-text">
+                                Selecting a setting will help provide more specific recommendations
                             </div>
                         </div>
                         
                         <div class="d-grid">
                             <button type="submit" class="btn btn-primary btn-lg">
-                                <i class="fas fa-search me-2"></i> Get Recommendation
+                                <i class="fas fa-search me-2"></i> Get Context-Aware Recommendation
                             </button>
                         </div>
                     </form>
                 </div>
             </div>
             
+            <!-- Query Results -->
+            {% if result %}
+            <div class="card shadow mb-4 border-success">
+                <div class="card-header bg-success text-white">
+                    <h4 class="mb-0"><i class="fas fa-check-circle me-2"></i> Recommendation</h4>
+                </div>
+                <div class="card-body">
+                    <h5 class="card-title">Analysis of your query:</h5>
+                    <div class="mb-3">
+                        <div class="fw-bold">Behavior Type:</div>
+                        <div class="badge bg-primary mb-2">{{ result.analysis.behavior_type|capitalize }}</div>
+                        <div class="progress" style="height: 10px;" title="Confidence: {{ (result.analysis.behavior_confidence * 100)|round }}%">
+                            <div class="progress-bar" role="progressbar" style="width: {{ (result.analysis.behavior_confidence * 100)|round }}%"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="fw-bold">Severity Level:</div>
+                        <div class="badge 
+                            {% if result.analysis.severity == 'low' %}
+                                bg-success
+                            {% elif result.analysis.severity == 'medium' %}
+                                bg-warning text-dark
+                            {% else %}
+                                bg-danger
+                            {% endif %} mb-2">
+                            {{ result.analysis.severity|capitalize }}
+                        </div>
+                        <div class="progress" style="height: 10px;" title="Confidence: {{ (result.analysis.severity_confidence * 100)|round }}%">
+                            <div class="progress-bar" role="progressbar" style="width: {{ (result.analysis.severity_confidence * 100)|round }}%"></div>
+                        </div>
+                    </div>
+                    
+                    {% if result.is_emergency %}
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>Emergency signals detected!</strong> This situation may require immediate attention.
+                    </div>
+                    {% endif %}
+                    
+                    <h5 class="mt-4">Recommended Protocol:</h5>
+                    {% if result.protocol_name %}
+                    <div class="alert alert-info">
+                        <strong><i class="fas fa-clipboard-list me-2"></i> {{ result.protocol_name }}</strong>
+                    </div>
+                    
+                    {% if result.context_note %}
+                    <div class="alert alert-warning">
+                        <strong><i class="fas fa-lightbulb me-2"></i> Contextual Note:</strong><br>
+                        {{ result.context_note }}
+                    </div>
+                    {% endif %}
+                    
+                    {% if result.recommendation %}
+                    <div class="card bg-light">
+                        <div class="card-body">
+                            <h6 class="card-subtitle mb-2 text-muted">Recommendation Details</h6>
+                            <p class="card-text">{{ result.recommendation.content }}</p>
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    {% else %}
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-circle me-2"></i>
+                        No specific protocol found for this behavior and severity. Consider consulting with a behavior specialist.
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- Example Questions -->
             <div class="card shadow">
                 <div class="card-header bg-light">
                     <h4 class="mb-0"><i class="fas fa-lightbulb me-2"></i> Example Questions</h4>
@@ -45,11 +168,11 @@
                 <div class="card-body">
                     <p class="mb-3">Here are some examples of questions you can ask:</p>
                     <ul class="mb-0">
-                        <li class="mb-2">"What should I do if a student is throwing items in class?"</li>
-                        <li class="mb-2">"How do I handle a situation where a student is refusing to do any work?"</li>
-                        <li class="mb-2">"A student is having an emotional meltdown. What steps should I take?"</li>
-                        <li class="mb-2">"What protocol should I follow when a student runs out of the classroom?"</li>
-                        <li>"What are the best strategies for a student who is arguing with peers?"</li>
+                        <li class="mb-2">"What should I do if a student is throwing items in the classroom?"</li>
+                        <li class="mb-2">"How do I handle a student who is refusing to do any work during math class?"</li>
+                        <li class="mb-2">"A student is having an anxiety attack in the cafeteria. What steps should I take?"</li>
+                        <li class="mb-2">"What SAMA protocol should I follow when a student is showing aggressive behavior?"</li>
+                        <li>"What are the best PBIS strategies for a student who is arguing with peers on the playground?"</li>
                     </ul>
                 </div>
             </div>
