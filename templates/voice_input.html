@@ -1,0 +1,210 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <h1 class="mb-3">Voice Input Processing</h1>
+        <p class="lead">Describe the behavioral situation using your voice</p>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('voice_decision_support') }}">Voice Support</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Voice Input</li>
+            </ol>
+        </nav>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8 offset-md-2 mb-4">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-microphone me-2"></i> Voice Input for Protocol: {{ protocol.name }}</h5>
+            </div>
+            <div class="card-body">
+                <div class="protocol-info mb-4">
+                    <div class="mb-2"><strong>Protocol Description:</strong></div>
+                    <p>{{ protocol.description }}</p>
+                    <div class="mb-2"><strong>Category:</strong> <span class="badge bg-secondary">{{ protocol.category or 'Uncategorized' }}</span></div>
+                </div>
+                
+                <div class="voice-control-area text-center p-4 mb-4">
+                    <div id="microphone-icon" class="mb-3">
+                        <i class="fas fa-microphone" style="font-size: 4rem; color: var(--bs-primary);"></i>
+                    </div>
+                    
+                    <div id="voice-status" class="mb-3">
+                        <div class="alert alert-info">
+                            Click the button below to start voice recognition
+                        </div>
+                    </div>
+                    
+                    <!-- For simulating voice input (will be replaced with actual voice recognition in production) -->
+                    <form method="POST" action="{{ url_for('voice_input_process') }}" id="voice-form">
+                        <input type="hidden" name="start_voice" value="1">
+                        
+                        <div class="mb-4">
+                            <label for="simulated_speech" class="form-label">Describe the behavior (simulation):</label>
+                            <textarea name="simulated_speech" id="simulated_speech" class="form-control mb-3" 
+                                      rows="3" placeholder="In a real environment, this would be captured from your voice input..."></textarea>
+                            <div class="form-text text-muted">
+                                In a production environment, this would be replaced with actual voice capture. For testing purposes, 
+                                please type what you would say.
+                            </div>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-lg btn-primary" id="start-voice-btn">
+                            <i class="fas fa-microphone me-2"></i> Analyze Voice Input
+                        </button>
+                    </form>
+                </div>
+                
+                <div class="alert alert-secondary">
+                    <div class="mb-2"><strong>Helpful cues to include in your description:</strong></div>
+                    <ul class="mb-0 small">
+                        <li>Is there an immediate safety concern?</li>
+                        <li>What specific behaviors are you observing?</li>
+                        <li>What is the intensity level of the behavior?</li>
+                        <li>What was happening before the behavior started?</li>
+                        <li>Are others affected by this behavior?</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="card-footer">
+                <div class="d-flex justify-content-between">
+                    <a href="{{ url_for('voice_decision_support') }}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-1"></i> Back to Protocol Selection
+                    </a>
+                    <a href="{{ url_for('decision_support') }}" class="btn btn-outline-primary">
+                        <i class="fas fa-keyboard me-1"></i> Switch to Text Input
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Get references to DOM elements
+    const voiceStatus = document.getElementById('voice-status');
+    const recordButton = document.getElementById('start-voice-btn');
+    const speechTextarea = document.getElementById('simulated_speech');
+    const voiceForm = document.getElementById('voice-form');
+    
+    // Initialize voice recognition using our helper function
+    // In a hybrid approach, we're using the browser's SpeechRecognition API for client-side voice capture
+    // and simulating server-side processing
+    
+    // Check if the browser supports Web Speech API
+    if (window.SpeechRecognition || window.webkitSpeechRecognition) {
+        // Replace the default button behavior 
+        recordButton.innerHTML = '<i class="fas fa-microphone me-2"></i> Start Voice Recognition';
+        recordButton.type = 'button'; // Change from submit to regular button
+        
+        // Initialize voice recognition with our helper function from main.js
+        const voiceRecognizer = initVoiceRecognition(
+            voiceStatus,
+            recordButton,
+            speechTextarea,
+            '/api/voice_capture',
+            processVoiceResult
+        );
+        
+        // Add submit button for when text is ready
+        const submitBtn = document.createElement('button');
+        submitBtn.type = 'submit';
+        submitBtn.className = 'btn btn-success mt-3';
+        submitBtn.innerHTML = '<i class="fas fa-paper-plane me-2"></i> Submit Voice Analysis';
+        submitBtn.style.display = 'none';
+        recordButton.parentNode.appendChild(submitBtn);
+        
+        // Callback function for processing voice recognition results
+        function processVoiceResult(data) {
+            console.log("Voice recognition result:", data);
+            
+            if (data.success) {
+                // Show the submit button once we have voice input
+                submitBtn.style.display = 'inline-block';
+                
+                // If analysis is available, show it
+                if (data.analysis && data.analysis.success) {
+                    const analysis = data.analysis;
+                    
+                    // Create a results panel to show the analysis
+                    const resultsPanel = document.createElement('div');
+                    resultsPanel.className = 'alert alert-info mt-3';
+                    resultsPanel.innerHTML = `
+                        <h6><i class="fas fa-robot me-2"></i> Analysis:</h6>
+                        <div class="mb-2">
+                            <strong>Decision Point:</strong> ${analysis.decision_point.question}
+                        </div>
+                        <div class="mb-2">
+                            <strong>Selected Option:</strong> ${analysis.selected_option.text}
+                        </div>
+                        <div class="mb-2">
+                            <strong>Keywords Detected:</strong> ${analysis.keywords.join(', ')}
+                        </div>
+                        ${analysis.is_emergency ? '<div class="alert alert-danger mt-2"><i class="fas fa-exclamation-triangle me-2"></i><strong>Emergency Situation Detected!</strong></div>' : ''}
+                    `;
+                    
+                    // Add the analysis panel after the form
+                    const analysisContainer = document.createElement('div');
+                    analysisContainer.id = 'voice-analysis-results';
+                    analysisContainer.appendChild(resultsPanel);
+                    
+                    // Remove any existing analysis
+                    const existingAnalysis = document.getElementById('voice-analysis-results');
+                    if (existingAnalysis) {
+                        existingAnalysis.remove();
+                    }
+                    
+                    voiceForm.parentNode.appendChild(analysisContainer);
+                }
+            } else {
+                // Show error if voice recognition failed
+                voiceStatus.innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-circle me-2"></i>
+                        Error: ${data.error || 'Failed to process voice input'}
+                    </div>
+                `;
+            }
+        }
+    } else {
+        // Fallback for browsers that don't support the Web Speech API
+        voiceStatus.innerHTML = `
+            <div class="alert alert-warning">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                Your browser doesn't support voice recognition. Please use a compatible browser like Chrome or Edge, 
+                or enter text manually in the field below.
+            </div>
+        `;
+    }
+    
+    // Form submission validation (for both voice and manual text input)
+    voiceForm.addEventListener('submit', function(e) {
+        const speechInput = speechTextarea.value;
+        if (!speechInput.trim()) {
+            e.preventDefault();
+            voiceStatus.innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-circle me-2"></i>
+                    Please provide input either by voice or by typing in the text field.
+                </div>
+            `;
+        } else {
+            voiceStatus.innerHTML = `
+                <div class="alert alert-info">
+                    <div class="spinner-border spinner-border-sm me-2" role="status">
+                        <span class="visually-hidden">Processing...</span>
+                    </div>
+                    Analyzing input...
+                </div>
+            `;
+        }
+    });
+});
+</script>
+{% endblock %}
+{% endblock %}

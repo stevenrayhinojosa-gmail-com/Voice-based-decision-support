@@ -603,9 +603,15 @@ def voice_capture():
         # result = voice_recognizer.listen_once()
         
         # For demo purposes, simulate a successful voice recognition
+        # Check if the request contains JSON data
+        if request.is_json:
+            simulated_text = request.json.get('simulated_text', 'The student is becoming agitated and disruptive in class')
+        else:
+            simulated_text = 'The student is becoming agitated and disruptive in class'
+            
         result = {
             "success": True,
-            "text": request.json.get('simulated_text', 'The student is becoming agitated and disruptive in class')
+            "text": simulated_text
         }
         
         if result["success"]:

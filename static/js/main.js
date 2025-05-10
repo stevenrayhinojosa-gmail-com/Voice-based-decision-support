@@ -1,5 +1,167 @@
 // Main JavaScript file for the application
 
+// Voice Recognition Helper Functions
+function initVoiceRecognition(statusElement, recordButton, resultElement, apiEndpoint, onResultCallback) {
+    if (!statusElement || !recordButton || !resultElement) {
+        console.error('Missing required elements for voice recognition');
+        return;
+    }
+    
+    // Check if the browser supports the Web Speech API
+    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+        statusElement.innerHTML = `
+            <div class="alert alert-warning">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                Your browser doesn't support voice recognition. Please use Chrome or Edge.
+            </div>
+        `;
+        recordButton.disabled = true;
+        return;
+    }
+    
+    // Use the SpeechRecognition interface
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const recognition = new SpeechRecognition();
+    
+    // Configure recognition
+    recognition.continuous = false;
+    recognition.interimResults = true;
+    recognition.lang = 'en-US';
+    
+    // Variables to track state
+    let isRecording = false;
+    let finalTranscript = '';
+    let interimTranscript = '';
+    
+    // Event listeners for recognition
+    recognition.onstart = function() {
+        isRecording = true;
+        statusElement.innerHTML = `
+            <div class="alert alert-info">
+                <div class="spinner-border spinner-border-sm me-2" role="status">
+                    <span class="visually-hidden">Listening...</span>
+                </div>
+                Listening... Speak now
+            </div>
+        `;
+        recordButton.innerHTML = '<i class="fas fa-stop me-2"></i> Stop Recording';
+        recordButton.classList.remove('btn-primary');
+        recordButton.classList.add('btn-danger');
+    };
+    
+    recognition.onresult = function(event) {
+        interimTranscript = '';
+        
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+            if (event.results[i].isFinal) {
+                finalTranscript += event.results[i][0].transcript;
+            } else {
+                interimTranscript += event.results[i][0].transcript;
+            }
+        }
+        
+        // Update the result element
+        resultElement.value = finalTranscript + interimTranscript;
+    };
+    
+    recognition.onerror = function(event) {
+        console.error('Recognition error:', event.error);
+        statusElement.innerHTML = `
+            <div class="alert alert-danger">
+                <i class="fas fa-exclamation-circle me-2"></i>
+                Error: ${event.error}. Please try again.
+            </div>
+        `;
+        isRecording = false;
+        resetButton();
+    };
+    
+    recognition.onend = function() {
+        isRecording = false;
+        resetButton();
+        
+        if (finalTranscript) {
+            statusElement.innerHTML = `
+                <div class="alert alert-success">
+                    <i class="fas fa-check-circle me-2"></i>
+                    Voice captured successfully!
+                </div>
+            `;
+            
+            // Call the API if an endpoint is provided
+            if (apiEndpoint && onResultCallback) {
+                sendVoiceToAPI(finalTranscript, apiEndpoint, onResultCallback);
+            }
+        } else {
+            statusElement.innerHTML = `
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    No speech detected. Please try again.
+                </div>
+            `;
+        }
+    };
+    
+    // Toggle recording when the button is clicked
+    recordButton.addEventListener('click', function() {
+        if (isRecording) {
+            recognition.stop();
+        } else {
+            finalTranscript = '';
+            recognition.start();
+        }
+    });
+    
+    function resetButton() {
+        recordButton.innerHTML = '<i class="fas fa-microphone me-2"></i> Start Recording';
+        recordButton.classList.remove('btn-danger');
+        recordButton.classList.add('btn-primary');
+    }
+    
+    function sendVoiceToAPI(text, endpoint, callback) {
+        fetch(endpoint, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ simulated_text: text })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (callback && typeof callback === 'function') {
+                callback(data);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            statusElement.innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-circle me-2"></i>
+                    Error sending voice data: ${error.message}
+                </div>
+            `;
+        });
+    }
+    
+    // Return an object with functions that can be called externally
+    return {
+        start: function() {
+            if (!isRecording) {
+                finalTranscript = '';
+                recognition.start();
+            }
+        },
+        stop: function() {
+            if (isRecording) {
+                recognition.stop();
+            }
+        },
+        isRecording: function() {
+            return isRecording;
+        }
+    };
+}
+
 // Wait for the DOM to be fully loaded
 document.addEventListener('DOMContentLoaded', function() {
     // Toggle terminal option fields in decision option form
