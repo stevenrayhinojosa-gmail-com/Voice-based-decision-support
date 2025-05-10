@@ -629,67 +629,136 @@ def process_teacher_input():
 @app.route('/rapid_input', methods=['GET', 'POST'])
 def rapid_input():
     """Route for teachers to quickly input behavioral data and get recommendations"""
-    form = ProtocolForm()  # Reusing just for protocol selection, not creating
+    from models import BehaviorType, SeverityLevel
     
     # Get all protocols for selection
     protocols = Protocol.query.all()
     
+    # Get all behavior types
+    behavior_types = BehaviorType.query.order_by(BehaviorType.name).all()
+    
+    # Severity level choices
+    severity_levels = [
+        (SeverityLevel.LOW.value, "Low - Minor disruption"),
+        (SeverityLevel.MEDIUM.value, "Medium - Notable disruption"),
+        (SeverityLevel.HIGH.value, "High - Significant disruption"),
+        (SeverityLevel.SEVERE.value, "Severe - Safety concern"),
+        (SeverityLevel.CRITICAL.value, "Critical - Emergency")
+    ]
+    
     if request.method == 'POST':
+        behavior_type_id = request.form.get('behavior_type_id')
         protocol_id = request.form.get('protocol_id')
         behavior_text = request.form.get('behavior_text')
         severity = request.form.get('severity')
         
-        logger.info(f"Teacher input - Protocol: {protocol_id}, Behavior: {behavior_text}, Severity: {severity}")
+        logger.info(f"Teacher input - Behavior Type: {behavior_type_id}, Protocol: {protocol_id}, " 
+                   f"Behavior: {behavior_text}, Severity: {severity}")
         
-        if not protocol_id or not behavior_text:
-            flash('Please select a protocol and provide behavior description', 'warning')
+        if not behavior_text:
+            flash('Please provide a behavior description', 'warning')
             return render_template('teacher_input.html', 
                                   protocols=protocols,
-                                  form=form,
+                                  behavior_types=behavior_types,
+                                  severity_levels=severity_levels,
                                   title="Rapid Input")
         
-        # Process the input through our decision model
-        analysis_result = analyze_speech_for_decision(behavior_text, int(protocol_id))
+        # If behavior type is provided but protocol isn't, try to find an appropriate protocol
+        if behavior_type_id and not protocol_id:
+            from models import BehaviorProtocol
+            # Look for a protocol that matches the behavior type and severity
+            behavior_protocol = BehaviorProtocol.query.filter_by(
+                behavior_type_id=behavior_type_id, 
+                severity_level=severity,
+                is_primary=True
+            ).first()
+            
+            if behavior_protocol:
+                protocol_id = behavior_protocol.protocol_id
+                logger.info(f"Selected protocol {protocol_id} based on behavior type and severity")
         
-        if analysis_result['success']:
-            # Store the recommendation in session
-            recommendation = None
-            next_step = None
+        # If we have a protocol, use it with our decision model
+        if protocol_id:
+            # Process the input through our decision model
+            analysis_result = analyze_speech_for_decision(behavior_text, int(protocol_id))
             
-            if analysis_result['is_terminal']:
-                recommendation = analysis_result['recommendation']
-                # Save the recommendation for display
-                session['recommendation'] = recommendation
+            if analysis_result['success']:
+                # Store the recommendation in session
+                recommendation = None
+                next_step = None
+                
+                if analysis_result['is_terminal']:
+                    recommendation = analysis_result['recommendation']
+                    # Save the recommendation for display
+                    session['recommendation'] = recommendation
+                else:
+                    # If not terminal, get the next decision point details
+                    next_dp_id = analysis_result['next_decision_id']
+                    next_dp = DecisionPoint.query.get(next_dp_id)
+                    if next_dp:
+                        next_step = next_dp.question
+                        session['current_dp_id'] = next_dp_id
+                
+                # Store input for display on result page
+                session['behavior_text'] = behavior_text
+                session['severity'] = severity
+                session['keywords'] = analysis_result.get('keywords', [])
+                session['is_emergency'] = analysis_result.get('is_emergency', False)
+                session['current_protocol_id'] = int(protocol_id)
+                
+                # If behavior type was selected, store it
+                if behavior_type_id:
+                    behavior_type = BehaviorType.query.get(behavior_type_id)
+                    if behavior_type:
+                        session['behavior_type'] = behavior_type.name
+                        session['behavior_category'] = behavior_type.category
+                
+                # If there's a recommendation, go to results
+                if recommendation:
+                    return redirect(url_for('rapid_result'))
+                # If there's a next step, continue the decision tree
+                elif next_step:
+                    return redirect(url_for('decision_process'))
+                else:
+                    flash('Unable to determine next step in protocol', 'danger')
             else:
-                # If not terminal, get the next decision point details
-                next_dp_id = analysis_result['next_decision_id']
-                next_dp = DecisionPoint.query.get(next_dp_id)
-                if next_dp:
-                    next_step = next_dp.question
-                    session['current_dp_id'] = next_dp_id
-            
-            # Store input for display on result page
-            session['behavior_text'] = behavior_text
-            session['severity'] = severity
-            session['keywords'] = analysis_result.get('keywords', [])
-            session['is_emergency'] = analysis_result.get('is_emergency', False)
-            session['current_protocol_id'] = int(protocol_id)
-            
-            # If there's a recommendation, go to results
-            if recommendation:
-                return redirect(url_for('rapid_result'))
-            # If there's a next step, continue the decision tree
-            elif next_step:
-                return redirect(url_for('decision_process'))
-            else:
-                flash('Unable to determine next step in protocol', 'danger')
+                # If analysis failed, show the error
+                flash(f"Analysis error: {analysis_result.get('error', 'Unknown error')}", 'danger')
         else:
-            # If analysis failed, show the error
-            flash(f"Analysis error: {analysis_result.get('error', 'Unknown error')}", 'danger')
+            # If no protocol is available, look for generic recommendations
+            from models import Recommendation
+            behavior_type = None
+            
+            if behavior_type_id:
+                behavior_type = BehaviorType.query.get(behavior_type_id)
+                
+                # Look for a recommendation specific to this behavior type and severity
+                recommendation = Recommendation.query.filter_by(
+                    behavior_type_id=behavior_type_id,
+                    severity_level=severity
+                ).first()
+                
+                if recommendation:
+                    # Save the recommendation for display
+                    session['recommendation'] = recommendation.content
+                    session['recommendation_title'] = recommendation.title
+                    session['behavior_text'] = behavior_text
+                    session['severity'] = severity
+                    session['behavior_type'] = behavior_type.name
+                    session['behavior_category'] = behavior_type.category
+                    
+                    return redirect(url_for('rapid_result'))
+                else:
+                    # No specific recommendation found
+                    flash(f"No specific recommendation found for {behavior_type.name} at {severity} severity.", 'warning')
+                    flash("Please select a protocol to continue or try a different behavior type.", 'info')
+            else:
+                flash("Please select a behavior type or protocol to continue.", 'warning')
     
     return render_template('teacher_input.html', 
                           protocols=protocols,
-                          form=form,
+                          behavior_types=behavior_types,
+                          severity_levels=severity_levels,
                           title="Rapid Input")
 
 @app.route('/rapid_result')
@@ -874,3 +943,36 @@ def voice_capture():
     except Exception as e:
         logger.error(f"Error in voice capture: {str(e)}")
         return jsonify({"success": False, "error": str(e)})
+
+
+# Admin routes and utilities
+
+@app.route('/admin/init_behavior_db')
+def init_behavior_db():
+    """Initialize the behavior database with sample data"""
+    from utils import (
+        add_sample_protocol,
+        add_sample_behavior_types,
+        add_sample_recommendations,
+        link_behaviors_to_protocols
+    )
+    
+    results = []
+    
+    # First add a protocol if none exists
+    protocol_result = add_sample_protocol()
+    results.append(f"Protocols: {protocol_result}")
+    
+    # Then add behavior types
+    behavior_types_result = add_sample_behavior_types()
+    results.append(f"Behavior Types: {behavior_types_result}")
+    
+    # Then link behaviors to protocols
+    links_result = link_behaviors_to_protocols()
+    results.append(f"Behavior-Protocol Links: {links_result}")
+    
+    # Finally add recommendations
+    recommendations_result = add_sample_recommendations()
+    results.append(f"Recommendations: {recommendations_result}")
+    
+    return jsonify({"success": True, "results": results})
