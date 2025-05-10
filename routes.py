@@ -9,6 +9,7 @@ from forms import (BehavioralDataForm, ProtocolForm, DecisionPointForm,
                   PredictionForm)
 from utils import load_behavioral_data_to_dataframe, preprocess_behavioral_data, get_protocol_tree, add_sample_protocol
 from ml_models import BehavioralDecisionModel
+from voice_recognition import voice_recognizer, analyze_speech_for_decision
 
 # Setup logging
 logger = logging.getLogger(__name__)
@@ -521,3 +522,114 @@ def get_model_fields(model_id):
             'success': False,
             'error': str(e)
         })
+
+# Voice recognition routes
+
+@app.route('/voice_decision_support', methods=['GET', 'POST'])
+def voice_decision_support():
+    """Route for voice-based decision support"""
+    form = DecisionSupportForm()
+    
+    # Populate protocol choices
+    protocols = Protocol.query.all()
+    form.protocol_id.choices = [(p.id, p.name) for p in protocols]
+    
+    if form.validate_on_submit():
+        # Store the selected protocol ID in session
+        session['current_protocol_id'] = form.protocol_id.data
+        return redirect(url_for('voice_input_process'))
+    
+    return render_template('voice_support.html',
+                          form=form,
+                          title="Voice-Based Decision Support")
+
+@app.route('/voice_input_process', methods=['GET', 'POST'])
+def voice_input_process():
+    """Route for processing voice input for decision support"""
+    # Check if a protocol is selected
+    if 'current_protocol_id' not in session:
+        flash('Please select a protocol first', 'warning')
+        return redirect(url_for('voice_decision_support'))
+    
+    protocol_id = session['current_protocol_id']
+    protocol = Protocol.query.get_or_404(protocol_id)
+    
+    if request.method == 'POST':
+        # This is where we would process the voice input in a real environment
+        # For now, we'll use a simulated voice input for testing
+        
+        if 'start_voice' in request.form:
+            # Pretend to start voice recognition
+            flash('Voice recognition started. Please describe the behavior...', 'info')
+            
+            # In a real environment, we would call voice_recognizer.listen_once() here
+            # and process the result
+            
+            # For demo purposes, let's simulate a voice input result
+            # (in production, this would come from the actual speech recognition)
+            simulated_speech = request.form.get('simulated_speech', '')
+            
+            if simulated_speech:
+                # Analyze the speech for decision mapping
+                analysis_result = analyze_speech_for_decision(simulated_speech, protocol_id)
+                
+                if analysis_result['success']:
+                    # If it's a terminal option, set the recommendation
+                    if analysis_result['is_terminal']:
+                        session['recommendation'] = analysis_result['recommendation']
+                        return redirect(url_for('decision_result'))
+                    else:
+                        # If not terminal, proceed to the next decision point
+                        session['current_dp_id'] = analysis_result['next_decision_id']
+                        flash(f"Voice analyzed: '{simulated_speech}'. Proceeding with option: {analysis_result['selected_option'].text}", 'success')
+                        return redirect(url_for('decision_process'))
+                else:
+                    # If analysis failed, show the error
+                    flash(f"Could not process voice input: {analysis_result.get('error', 'Unknown error')}", 'danger')
+                    
+                    # If keywords were extracted but no mapping found, show them
+                    if 'keywords' in analysis_result and analysis_result['keywords']:
+                        flash(f"Detected keywords: {', '.join(analysis_result['keywords'])}", 'info')
+    
+    return render_template('voice_input.html',
+                          protocol=protocol,
+                          title="Voice Input Processing")
+
+@app.route('/api/voice_capture', methods=['POST'])
+def voice_capture():
+    """API endpoint for capturing voice input"""
+    try:
+        # In real-world scenario, we would call the voice recognizer here
+        # result = voice_recognizer.listen_once()
+        
+        # For demo purposes, simulate a successful voice recognition
+        result = {
+            "success": True,
+            "text": request.json.get('simulated_text', 'The student is becoming agitated and disruptive in class')
+        }
+        
+        if result["success"]:
+            protocol_id = session.get('current_protocol_id')
+            if protocol_id:
+                # Analyze the speech for decision support
+                analysis = analyze_speech_for_decision(result["text"], protocol_id)
+                return jsonify({
+                    "success": True,
+                    "text": result["text"],
+                    "analysis": analysis
+                })
+            else:
+                return jsonify({
+                    "success": True,
+                    "text": result["text"],
+                    "analysis": {
+                        "success": False,
+                        "error": "No protocol selected"
+                    }
+                })
+        else:
+            return jsonify(result)
+    
+    except Exception as e:
+        logger.error(f"Error in voice capture: {str(e)}")
+        return jsonify({"success": False, "error": str(e)})

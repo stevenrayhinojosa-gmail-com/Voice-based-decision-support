@@ -17,6 +17,7 @@ dependencies = [
     "scikit-learn>=1.6.1",
     "pandas>=2.2.3",
     "speechrecognition>=3.14.2",
+    "pyaudio>=0.2.14",
 ]
 
 [[tool.uv.index]]

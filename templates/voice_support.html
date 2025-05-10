@@ -1,0 +1,78 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <h1 class="mb-3">Voice-Based Decision Support</h1>
+        <p class="lead">Use voice input to navigate behavioral decision protocols</p>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6 offset-md-3 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-microphone me-2"></i> Select Protocol for Voice Analysis</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('voice_decision_support') }}">
+                    {{ form.hidden_tag() }}
+                    
+                    <div class="mb-4">
+                        <label for="protocol_id" class="form-label">{{ form.protocol_id.label }}</label>
+                        {{ form.protocol_id(class="form-select" + (" is-invalid" if form.protocol_id.errors else "")) }}
+                        {% for error in form.protocol_id.errors %}
+                        <div class="invalid-feedback">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                    
+                    <div class="alert alert-info mb-4">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Select a protocol to begin the voice-based decision support process. You'll be able to provide
+                        behavioral descriptions using your voice, and the system will analyze them to provide recommendations.
+                    </div>
+                    
+                    {{ form.submit(class="btn btn-primary w-100", value="Continue to Voice Input") }}
+                </form>
+            </div>
+        </div>
+        
+        <!-- Voice Recognition Info -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i> About Voice-Based Support</h5>
+            </div>
+            <div class="card-body">
+                <div class="row align-items-center mb-3">
+                    <div class="col-md-3 text-center">
+                        <i class="fas fa-microphone text-primary" style="font-size: 3rem;"></i>
+                    </div>
+                    <div class="col-md-9">
+                        <h5>How it works</h5>
+                        <p class="small">
+                            The system will analyze your voice description of a behavioral situation
+                            and map it to appropriate decision points and options in the selected protocol.
+                        </p>
+                    </div>
+                </div>
+                
+                <div class="alert alert-secondary mt-3">
+                    <div class="mb-2"><strong>Tips for effective voice input:</strong></div>
+                    <ul class="mb-0 small">
+                        <li>Speak clearly at a normal pace</li>
+                        <li>Describe the behavior and context in detail</li>
+                        <li>Mention important factors like safety concerns or escalation</li>
+                        <li>Provide specific behavioral indicators when possible</li>
+                    </ul>
+                </div>
+                
+                <div class="text-center mt-3">
+                    <a href="{{ url_for('decision_support') }}" class="btn btn-outline-secondary">
+                        <i class="fas fa-keyboard me-1"></i> Use Text-Based Support Instead
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
