@@ -1,0 +1,31 @@
+situation_id,behavior_description,behavior_type,severity_level,setting,has_bip,recommended_action,protocol_source
+1,Student is defiance with a severity level of high in the hallway.,Defiance,High,Hallway,True,Involve administration after two warnings.,District Policy A
+2,Student is defiance with a severity level of high in the hallway.,Defiance,High,Hallway,True,Involve administration after two warnings.,PBIS
+3,Student is defiance with a severity level of high in the playground.,Defiance,High,Playground,True,Involve administration after two warnings.,SAMA
+4,Student is aggression with a severity level of medium in the playground.,Aggression,Medium,Playground,False,"Use calm verbal de-escalation, maintain safe distance.",SAMA
+5,Student is defiance with a severity level of high in the classroom.,Defiance,High,Classroom,True,Involve administration after two warnings.,SEL
+6,Student is withdrawal with a severity level of low in the cafeteria.,Withdrawal,Low,Cafeteria,True,"Encourage participation, positive reinforcement.",SAMA
+7,Student is withdrawal with a severity level of high in the classroom.,Withdrawal,High,Classroom,True,"One-on-one check-in, involve counselor.",SAMA
+8,Student is aggression with a severity level of medium in the playground.,Aggression,Medium,Playground,False,"Use calm verbal de-escalation, maintain safe distance.",District Policy A
+9,Student is anxiety with a severity level of low in the classroom.,Anxiety,Low,Classroom,True,Provide reassurance and simple instructions.,District Policy A
+10,Student is aggression with a severity level of high in the hallway.,Aggression,High,Hallway,True,"Use SAMA posture, evacuate peers, call admin.",District Policy A
+11,Student is aggression with a severity level of medium in the hallway.,Aggression,Medium,Hallway,False,"Use calm verbal de-escalation, maintain safe distance.",SAMA
+12,Student is disruption with a severity level of high in the cafeteria.,Disruption,High,Cafeteria,False,"Call for support, remove student temporarily.",SAMA
+13,Student is defiance with a severity level of medium in the hallway.,Defiance,Medium,Hallway,False,"Repeat directive calmly, offer clear choices.",SAMA
+14,Student is withdrawal with a severity level of medium in the cafeteria.,Withdrawal,Medium,Cafeteria,False,"Approach quietly, offer support and sensory break.",District Policy A
+15,Student is withdrawal with a severity level of medium in the classroom.,Withdrawal,Medium,Classroom,True,"Approach quietly, offer support and sensory break.",PBIS
+16,Student is defiance with a severity level of high in the hallway.,Defiance,High,Hallway,False,Involve administration after two warnings.,PBIS
+17,Student is aggression with a severity level of medium in the playground.,Aggression,Medium,Playground,False,"Use calm verbal de-escalation, maintain safe distance.",SEL
+18,Student is defiance with a severity level of medium in the playground.,Defiance,Medium,Playground,False,"Repeat directive calmly, offer clear choices.",SEL
+19,Student is aggression with a severity level of low in the playground.,Aggression,Low,Playground,True,"Verbal redirection, set clear boundaries.",District Policy A
+20,Student is disruption with a severity level of high in the playground.,Disruption,High,Playground,True,"Call for support, remove student temporarily.",PBIS
+21,Student is anxiety with a severity level of medium in the playground.,Anxiety,Medium,Playground,False,"Offer quiet space, practice deep breathing.",District Policy A
+22,Student is anxiety with a severity level of high in the playground.,Anxiety,High,Playground,False,"Follow BIP, offer immediate emotional support.",SAMA
+23,Student is aggression with a severity level of medium in the cafeteria.,Aggression,Medium,Cafeteria,False,"Use calm verbal de-escalation, maintain safe distance.",SEL
+24,Student is aggression with a severity level of low in the hallway.,Aggression,Low,Hallway,True,"Verbal redirection, set clear boundaries.",District Policy A
+25,Student is anxiety with a severity level of low in the playground.,Anxiety,Low,Playground,True,Provide reassurance and simple instructions.,SAMA
+26,Student is disruption with a severity level of medium in the hallway.,Disruption,Medium,Hallway,False,"Provide structured choices, quiet corner.",SAMA
+27,Student is anxiety with a severity level of medium in the classroom.,Anxiety,Medium,Classroom,False,"Offer quiet space, practice deep breathing.",SEL
+28,Student is anxiety with a severity level of medium in the playground.,Anxiety,Medium,Playground,True,"Offer quiet space, practice deep breathing.",SEL
+29,Student is aggression with a severity level of medium in the cafeteria.,Aggression,Medium,Cafeteria,False,"Use calm verbal de-escalation, maintain safe distance.",SAMA
+30,Student is anxiety with a severity level of medium in the hallway.,Anxiety,Medium,Hallway,False,"Offer quiet space, practice deep breathing.",PBIS

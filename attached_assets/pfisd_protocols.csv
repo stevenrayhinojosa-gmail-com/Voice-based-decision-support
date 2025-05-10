@@ -1,0 +1,13 @@
+protocol_id,tier,behavior_type,setting,action_steps,protocol_source
+1,Tier 1,Disruption,Classroom,"Teach and model expected behaviors; use positive reinforcement (e.g., praise, tokens)",PfISD PBIS
+2,Tier 1,Defiance,Hallway,Teach hallway behavioral expectations; use proactive reminders and acknowledgments,PfISD PBIS
+3,Tier 1,Anxiety,Classroom,Implement SEL lessons; teach breathing techniques and coping strategies,PfISD SEL
+4,Tier 1,Verbal Aggression,Cafeteria,Use proximity control and calm verbal cues; defuse tension,PfISD SEL
+5,Tier 2,Defiance,Classroom,Check-in/check-out with adult mentor; small group social skills training,PfISD PBIS Tier 2
+6,Tier 2,Disruption,Playground,Schedule restorative circles; implement targeted social skills groups,PfISD Restorative Practices
+7,Tier 2,Withdrawal,Classroom,Counselor-led check-ins; provide supported engagement strategies,PfISD SEL Tier 2
+8,Tier 3,Physical Aggression,Classroom,Conduct Functional Behavior Assessment (FBA) and develop a Behavior Intervention Plan (BIP),PfISD Special Education
+9,Tier 3,Physical Aggression,Playground,Use Safe Crisis Management techniques; call for trained support,PfISD Crisis Prevention
+10,Tier 3,Severe Defiance,Hallway,Implement individualized behavior contract and frequent progress monitoring,PfISD Special Education
+11,Tier 1,Disruption,Cafeteria,Teach cafeteria expectations; use peer reinforcement strategies,PfISD PBIS
+12,Tier 2,Anxiety,Classroom,Provide targeted anxiety coping groups; access to sensory break space,PfISD SEL Tier 2

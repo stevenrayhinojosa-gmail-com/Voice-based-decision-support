@@ -517,7 +517,7 @@ def voice_input_process():
                     else:
                         # If not terminal, proceed to the next decision point
                         session['current_dp_id'] = analysis_result['next_decision_id']
-                        flash(f"Voice analyzed: '{simulated_speech}'. Proceeding with option: {analysis_result['selected_option'].text}", 'success')
+                        flash(f"Voice analyzed: '{simulated_speech}'. Proceeding with option: {analysis_result['selected_option']['text']}", 'success')
                         # Display contextual information
                         flash(f"Context: {time_period.replace('-', ' ').title()}, Noise level: {noise_level}dB", 'info')
                         return redirect(url_for('decision_process'))
