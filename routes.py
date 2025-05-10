@@ -771,30 +771,39 @@ def rapid_result():
     
     # Get all stored session data
     recommendation = session.get('recommendation')
+    recommendation_title = session.get('recommendation_title')
     behavior_text = session.get('behavior_text')
     severity = session.get('severity')
     keywords = session.get('keywords', [])
     is_emergency = session.get('is_emergency', False)
     protocol_id = session.get('current_protocol_id')
+    behavior_type = session.get('behavior_type')
+    behavior_category = session.get('behavior_category')
     
     protocol = Protocol.query.get_or_404(protocol_id) if protocol_id else None
     
     # Clear the session data
     session.pop('recommendation', None)
+    session.pop('recommendation_title', None)
     session.pop('behavior_text', None)
     session.pop('severity', None)
     session.pop('keywords', None)
     session.pop('is_emergency', None)
     session.pop('current_protocol_id', None)
     session.pop('current_dp_id', None)
+    session.pop('behavior_type', None)
+    session.pop('behavior_category', None)
     
     return render_template('teacher_result.html',
                           recommendation=recommendation,
+                          recommendation_title=recommendation_title,
                           behavior_text=behavior_text,
                           severity=severity,
                           keywords=keywords,
                           is_emergency=is_emergency,
                           protocol=protocol,
+                          behavior_type=behavior_type,
+                          behavior_category=behavior_category,
                           title="Recommendation")
 
 @app.route('/api/voice_input', methods=['POST'])
@@ -889,6 +898,53 @@ def voice_input():
         
     except Exception as e:
         logger.error(f"Error processing voice input: {str(e)}")
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        })
+
+@app.route('/api/save_recommendation', methods=['POST'])
+def save_recommendation():
+    """API endpoint for saving recommendation data to the session"""
+    try:
+        data = request.get_json() if request.is_json else {}
+        
+        # Save relevant data to session
+        if 'behavior_text' in data:
+            session['behavior_text'] = data['behavior_text']
+        
+        if 'behavior_type_id' in data and data['behavior_type_id']:
+            behavior_type_id = int(data['behavior_type_id'])
+            behavior_type = BehaviorType.query.get(behavior_type_id)
+            if behavior_type:
+                session['behavior_type'] = behavior_type.name
+                session['behavior_category'] = behavior_type.category
+        
+        if 'severity' in data:
+            session['severity'] = data['severity']
+            
+        if 'keywords' in data:
+            session['keywords'] = data['keywords']
+            
+        if 'protocol_id' in data and data['protocol_id']:
+            session['current_protocol_id'] = int(data['protocol_id'])
+            
+        if 'is_terminal' in data:
+            session['is_terminal'] = data['is_terminal']
+            
+        if 'recommendation' in data:
+            session['recommendation'] = data['recommendation']
+            
+        if 'recommendation_title' in data:
+            session['recommendation_title'] = data['recommendation_title']
+            
+        if 'next_decision_id' in data and data['next_decision_id']:
+            session['current_dp_id'] = int(data['next_decision_id'])
+            
+        return jsonify({"success": True})
+        
+    except Exception as e:
+        logger.error(f"Error saving recommendation to session: {str(e)}")
         return jsonify({
             "success": False,
             "error": str(e)

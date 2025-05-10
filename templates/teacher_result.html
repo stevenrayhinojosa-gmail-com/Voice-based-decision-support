@@ -20,15 +20,22 @@
                 </div>
                 <div class="card-body">
                     <div class="row mb-4">
-                        <div class="col-md-4">
+                        <div class="col-md-3">
+                            <p class="fw-bold mb-1">Behavior Type:</p>
+                            <p>{{ behavior_type if behavior_type else "N/A" }}</p>
+                            {% if behavior_category %}
+                            <span class="badge bg-secondary">{{ behavior_category }}</span>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-3">
                             <p class="fw-bold mb-1">Protocol:</p>
                             <p>{{ protocol.name if protocol else "N/A" }}</p>
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-3">
                             <p class="fw-bold mb-1">Severity:</p>
                             <p>{{ severity|title if severity else "N/A" }}</p>
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-3">
                             <p class="fw-bold mb-1">Emergency Status:</p>
                             <span class="badge {{ 'bg-danger' if is_emergency else 'bg-success' }}">
                                 {{ "Emergency" if is_emergency else "Non-Emergency" }}
@@ -76,7 +83,7 @@
                                         <i class="{{ 'fas fa-exclamation-circle' if is_emergency else 'fas fa-lightbulb' }} fa-2x"></i>
                                     </div>
                                     <div>
-                                        <h4>Recommended Action:</h4>
+                                        <h4>{{ recommendation_title|default('Recommended Action') }}:</h4>
                                         <p class="mb-0">{{ recommendation|safe }}</p>
                                     </div>
                                 </div>

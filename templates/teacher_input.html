@@ -493,12 +493,11 @@ document.addEventListener('DOMContentLoaded', function() {
                             </div>
                         `;
                     }
-                    `;
                     
-                    voiceAnalysisResult.innerHTML = resultHTML;
+                    voiceResultArea.innerHTML = resultHTML;
                 } else {
                     // Show error message
-                    voiceAnalysisResult.innerHTML = `
+                    voiceResultArea.innerHTML = `
                         <div class="alert alert-danger">
                             <i class="fas fa-exclamation-circle me-2"></i>
                             Error analyzing voice input: ${data.error || 'Unknown error'}
