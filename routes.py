@@ -3,19 +3,23 @@ import logging
 import pandas as pd
 from flask import render_template, request, redirect, url_for, flash, jsonify, session
 from app import app, db
-from models import Protocol, DecisionPoint, DecisionOption, BehavioralData, MLModel
+from models import Protocol, DecisionPoint, DecisionOption, BehavioralData, MLModel, SeverityLevel, BehaviorType, BehaviorProtocol, Recommendation
 from forms import (BehavioralDataForm, ProtocolForm, DecisionPointForm, 
                   DecisionOptionForm, ModelTrainingForm, DecisionSupportForm,
                   PredictionForm)
 from utils import load_behavioral_data_to_dataframe, preprocess_behavioral_data, get_protocol_tree, add_sample_protocol
 from ml_models import BehavioralDecisionModel
 from voice_recognition import voice_recognizer, analyze_speech_for_decision
+from advanced_nlp import BehaviorQueryProcessor
 
 # Setup logging
 logger = logging.getLogger(__name__)
 
 # Initialize the ML model
 behavioral_model = BehavioralDecisionModel()
+
+# Initialize the NLP processor for natural language queries
+nlp_processor = BehaviorQueryProcessor(db)
 
 @app.route('/')
 def index():
@@ -949,6 +953,71 @@ def save_recommendation():
             "success": False,
             "error": str(e)
         })
+
+# Natural language query route
+@app.route('/natural_language_query', methods=['GET', 'POST'])
+def natural_language_query():
+    """
+    Handle natural language queries from teachers using advanced NLP
+    """
+    # Initialize context data
+    result = None
+    query = None
+    
+    if request.method == 'POST':
+        # Get query from form
+        query = request.form.get('query')
+        if not query:
+            flash('Please enter a question or describe a behavioral situation', 'warning')
+            return render_template('natural_language_query.html')
+        
+        # Process the query with our NLP processor
+        result = nlp_processor.get_response_for_query(query)
+        
+        if result['success']:
+            # If we have recommendations, save them to session
+            if result['recommendation']:
+                session['recommendation'] = result['recommendation']['content']
+                session['recommendation_title'] = result['recommendation']['title']
+            
+            # Get behavior type details
+            behavior_type = result['analysis']['behavior_type']
+            if behavior_type:
+                # Convert snake_case to display format
+                behavior_type_display = behavior_type.replace('_', ' ').title()
+                session['behavior_type'] = behavior_type_display
+                
+                # Try to get category from database
+                try:
+                    bt_name = behavior_type.replace('_', ' ')
+                    bt = BehaviorType.query.filter(BehaviorType.name.ilike(f"%{bt_name}%")).first()
+                    if bt:
+                        session['behavior_category'] = bt.category
+                except Exception as e:
+                    logger.error(f"Error finding behavior type: {str(e)}")
+            
+            # Save severity
+            severity = result['analysis']['severity']
+            session['severity'] = severity
+            
+            # Save emergency status
+            session['is_emergency'] = result['analysis']['is_emergency']
+            
+            # Save protocol info if available
+            if result['protocol_id']:
+                session['current_protocol_id'] = result['protocol_id']
+            
+            # Save the original query
+            session['behavior_text'] = query
+            
+            # Redirect to results page
+            return redirect(url_for('rapid_result'))
+        else:
+            # If no recommendations found
+            flash('No specific recommendations found for your query. Please try again with more details or select a different approach.', 'warning')
+    
+    return render_template('natural_language_query.html',
+                          title="Ask a Question")
 
 # Voice recognition routes
 
