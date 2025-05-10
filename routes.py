@@ -1,8 +1,10 @@
 import logging
 import os
+import json
 from datetime import datetime
 from flask import render_template, request, redirect, url_for, flash, session, jsonify
 from sqlalchemy import func, and_, or_
+from sqlalchemy.ext.declarative import DeclarativeMeta
 
 from app import app, db
 from forms import *
@@ -11,6 +13,24 @@ from ml_models import BehavioralDecisionModel
 from voice_recognition import analyze_speech_for_decision, extract_keywords_from_speech
 from advanced_nlp import BehaviorQueryProcessor
 from context_sensors import ContextSensor, context_sensor
+
+# Helper class for JSON serialization of SQLAlchemy objects
+class AlchemyEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj.__class__, DeclarativeMeta):
+            # Handle SQLAlchemy objects
+            fields = {}
+            for field in [x for x in dir(obj) if not x.startswith('_') and x != 'metadata']:
+                data = obj.__getattribute__(field)
+                try:
+                    # Try to serialize the data
+                    json.dumps(data)
+                    fields[field] = data
+                except TypeError:
+                    # Skip non-serializable fields
+                    fields[field] = str(data)
+            return fields
+        return json.JSONEncoder.default(self, obj)
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
