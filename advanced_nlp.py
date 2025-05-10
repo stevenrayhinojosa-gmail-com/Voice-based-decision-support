@@ -480,12 +480,16 @@ class BehaviorQueryProcessor:
             logger.error(f"Error finding recommendation for behavior: {str(e)}")
             return None
     
-    def get_response_for_query(self, query):
+    def get_response_for_query(self, query, setting=None, time_period=None, noise_level_db=None, is_transition_period=False):
         """
-        Generate a complete response for a teacher query
+        Generate a complete response for a teacher query with optional context data
         
         Parameters:
         - query: String containing the teacher's question or description
+        - setting: Optional classroom setting (e.g., 'classroom', 'hallway')
+        - time_period: Optional time period from context sensor
+        - noise_level_db: Optional noise level from context sensor
+        - is_transition_period: Whether this is a transition period between classes
         
         Returns:
         - Dictionary containing response details
@@ -497,9 +501,50 @@ class BehaviorQueryProcessor:
         behavior_type = query_analysis['behavior_type']
         severity = query_analysis['severity']
         
-        # Get protocol and recommendation
-        protocol_id, protocol_name = self.get_protocol_for_behavior(behavior_type, severity)
-        recommendation = self.get_recommendation_for_behavior(behavior_type, severity)
+        # Extract setting from query if not provided
+        if not setting:
+            # Look for common settings in the query
+            settings = ['classroom', 'hallway', 'cafeteria', 'playground', 'gym', 'library']
+            query_lower = query.lower()
+            for s in settings:
+                if s in query_lower:
+                    setting = s
+                    break
+        
+        # Get protocol and recommendation with context
+        protocol_id, protocol_name = self.get_protocol_for_behavior(
+            behavior_type, 
+            severity,
+            setting=setting,
+            time_period=time_period,
+            noise_level_db=noise_level_db
+        )
+        
+        recommendation = self.get_recommendation_for_behavior(
+            behavior_type, 
+            severity,
+            setting=setting,
+            time_period=time_period,
+            noise_level_db=noise_level_db
+        )
+        
+        # Prepare context notes based on environmental factors
+        context_note = ""
+        if time_period and noise_level_db:
+            if 'lunch' in time_period and noise_level_db > -65:
+                context_note = "Note: High noise levels during lunch period may increase student agitation."
+            elif 'morning' in time_period and noise_level_db < -70:
+                context_note = "Note: Quiet morning environment may help with de-escalation strategies."
+            elif is_transition_period:
+                context_note = "Note: This is a transition period which may contribute to increased behavior issues."
+        
+        # Add protocol-specific notes from our imported datasets
+        if protocol_name and 'SAMA' in protocol_name and behavior_type.lower() in ['aggression', 'risk behavior']:
+            context_note += " Follow SAMA safety protocols for staff and student safety."
+        elif protocol_name and 'PBIS' in protocol_name:
+            context_note += " Consider using PBIS reinforcement strategies."
+        elif protocol_name and 'SEL' in protocol_name and behavior_type.lower() == 'anxiety':
+            context_note += " Implement SEL-based calming techniques."
         
         # Construct response
         response = {
@@ -508,6 +553,11 @@ class BehaviorQueryProcessor:
             'protocol_id': protocol_id,
             'protocol_name': protocol_name,
             'recommendation': recommendation,
+            'setting': setting,
+            'time_period': time_period,
+            'noise_level_db': noise_level_db,
+            'is_transition_period': is_transition_period,
+            'context_note': context_note,
             'success': protocol_id is not None or recommendation is not None
         }
         

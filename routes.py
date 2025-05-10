@@ -395,22 +395,48 @@ def teacher_result():
 def natural_language_query():
     """
     Handle natural language queries from teachers using advanced NLP
+    with context awareness from sensors
     """
     query_text = ""
     result = None
     
+    # Get context data for enhanced analysis
+    from context_sensors import context_sensor
+    context_data = context_sensor.get_context_data()
+    time_period = context_data['time_period']['name']
+    noise_level = context_data['noise_level_db']
+    is_transition = context_data['time_period']['is_transition']
+    
+    # Include context information in the template
+    context_info = {
+        'time_period': time_period.replace('-', ' ').title(),
+        'noise_level': f"{noise_level:.1f} dB",
+        'is_transition': 'Yes' if is_transition else 'No'
+    }
+    
     if request.method == 'POST':
         query_text = request.form.get('query', '')
+        setting = request.form.get('setting', '')
         
         if query_text:
-            # Process the query using our NLP processor
+            # Process the query using our enhanced NLP processor with context
             query_processor = BehaviorQueryProcessor()
-            result = query_processor.get_response_for_query(query_text)
+            result = query_processor.get_response_for_query(
+                query_text,
+                setting=setting,
+                time_period=time_period,
+                noise_level_db=noise_level,
+                is_transition_period=is_transition
+            )
+            
+            # Log the query with context for later analysis
+            logger.info(f"NL Query: '{query_text}' processed with context - Time: {time_period}, Noise: {noise_level}dB")
             
     return render_template('natural_language_query.html',
                           query_text=query_text,
                           result=result,
-                          title="Natural Language Query")
+                          context=context_info,
+                          title="Context-Aware Natural Language Query")
 
 @app.route('/voice_decision_support', methods=['GET', 'POST'])
 def voice_decision_support():
