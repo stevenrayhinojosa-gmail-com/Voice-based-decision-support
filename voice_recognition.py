@@ -345,6 +345,61 @@ def analyze_speech_for_decision(speech_text, protocol_id=None, time_period=None,
         safety_keywords = decision_mapping.get(1, {}).get("keywords", {}).get("yes", [])
         is_emergency = any(keyword in safety_keywords for keyword in keywords)
         
+        # Context-specific behavior mappings based on time period and noise level
+        context_specific_rules = [
+            # Rule 1: Yelling in noisy post-lunch periods requires different handling
+            {
+                "condition": lambda: "yelling" in keywords and 
+                                     time_period == "post-lunch" and 
+                                     noise_level_db and noise_level_db > -50,
+                "behavior": "yelling",
+                "severity": "high",
+                "recommendation": "Move to quiet space + SAMA defensive posture",
+                "explanation": "High noise levels after lunch may trigger sensory overload"
+            },
+            # Rule 2: Aggressive behavior during transitions requires specific handling
+            {
+                "condition": lambda: any(k in ["aggressive", "hitting", "fighting"] for k in keywords) and 
+                                     is_transition_period and 
+                                     noise_level_db and noise_level_db > -40,
+                "behavior": "physical_aggression",
+                "severity": "high",
+                "recommendation": "Clear area of other students + implement crisis protocol",
+                "explanation": "Transition periods combined with noise increase aggression risk"
+            },
+            # Rule 3: Special handling for anxiety/withdrawal during high-stress periods
+            {
+                "condition": lambda: any(k in ["anxious", "withdrawn", "hiding", "scared"] for k in keywords) and 
+                                     time_period in ["exam-period", "morning-block-1"] and 
+                                     noise_level_db and noise_level_db < -60,
+                "behavior": "anxiety",
+                "severity": "medium", 
+                "recommendation": "Provide quiet space with minimal sensory input + calming activities",
+                "explanation": "Early morning and testing periods can increase anxiety in quiet environments"
+            },
+            # Rule 4: Special handling for defiance during end-of-day periods
+            {
+                "condition": lambda: any(k in ["defiant", "refusing", "noncompliant"] for k in keywords) and 
+                                     time_period in ["afternoon-block-2", "dismissal"] and 
+                                     not is_transition_period,
+                "behavior": "defiance",
+                "severity": "medium",
+                "recommendation": "Provide clear, limited choices + positive reinforcement system",
+                "explanation": "End-of-day fatigue can lead to defiance and limit student response to intervention"
+            }
+        ]
+        
+        # Check if any context-specific rules apply
+        context_rule_applied = False
+        applied_rule = None
+        
+        for rule in context_specific_rules:
+            if rule["condition"]():
+                applied_rule = rule
+                context_rule_applied = True
+                logger.info(f"Applied context-specific rule for {rule['behavior']} behavior")
+                break
+                
         # Map the speech to the current decision point
         if current_dp.id in decision_mapping:
             mapping = decision_mapping[current_dp.id]
@@ -366,11 +421,23 @@ def analyze_speech_for_decision(speech_text, protocol_id=None, time_period=None,
         
             # Find the corresponding option object
             selected_option = None
-            for option in options:
-                # Case-insensitive match that looks for the option text within the best match
-                if best_match.lower() in option.text.lower():
-                    selected_option = option
-                    break
+            
+            # If a context-specific rule was applied, we might want to override the selection
+            if context_rule_applied and applied_rule:
+                # Try to find an option that matches the context-specific recommendation
+                for option in options:
+                    if applied_rule["recommendation"].lower() in option.text.lower():
+                        selected_option = option
+                        logger.info(f"Selected option based on context rule: {option.text}")
+                        break
+            
+            # If no context rule applied or we couldn't find a matching option, use the standard approach
+            if not selected_option:
+                for option in options:
+                    # Case-insensitive match that looks for the option text within the best match
+                    if best_match.lower() in option.text.lower():
+                        selected_option = option
+                        break
             
             if selected_option:
                 # Adjust decision weight based on context
@@ -390,7 +457,7 @@ def analyze_speech_for_decision(speech_text, protocol_id=None, time_period=None,
                     if is_emergency:
                         adjusted_confidence *= 1.1
                 
-                return {
+                response = {
                     "success": True,
                     "decision_point": current_dp,
                     "selected_option": selected_option,
@@ -407,15 +474,43 @@ def analyze_speech_for_decision(speech_text, protocol_id=None, time_period=None,
                     "is_transition_period": is_transition_period,
                     "context_adjusted": True
                 }
+                
+                # If a context-specific rule was applied, include that information
+                if context_rule_applied and applied_rule:
+                    response["context_rule_applied"] = True
+                    response["context_rule"] = {
+                        "behavior": applied_rule["behavior"],
+                        "severity": applied_rule["severity"],
+                        "recommendation": applied_rule["recommendation"],
+                        "explanation": applied_rule["explanation"]
+                    }
+                
+                return response
             else:
                 # Fallback if we couldn't map to a specific option
-                return {
+                response = {
                     "success": False,
                     "error": f"Could not find option matching intent '{best_match}'",
                     "keywords": keywords,
                     "decision_point": current_dp,
-                    "is_emergency": is_emergency
+                    "is_emergency": is_emergency,
+                    # Include context data
+                    "time_period": time_period,
+                    "noise_level_db": noise_level_db,
+                    "is_transition_period": is_transition_period
                 }
+                
+                # If a context-specific rule was applied, include that information
+                if context_rule_applied and applied_rule:
+                    response["context_rule_applied"] = True
+                    response["context_rule"] = {
+                        "behavior": applied_rule["behavior"],
+                        "severity": applied_rule["severity"],
+                        "recommendation": applied_rule["recommendation"],
+                        "explanation": applied_rule["explanation"]
+                    }
+                    
+                return response
         else:
             # For decision points without specific mappings, use simple yes/no mapping
             yes_option = next((opt for opt in options if "yes" in opt.text.lower()), None)
@@ -428,11 +523,24 @@ def analyze_speech_for_decision(speech_text, protocol_id=None, time_period=None,
             positive_count = sum(1 for word in speech_text.lower().split() if word in positive_indicators)
             negative_count = sum(1 for word in speech_text.lower().split() if word in negative_indicators)
             
-            # Select the option based on the counts
-            selected_option = yes_option if positive_count > negative_count else no_option
+            # First check if any context rules apply, even for simple yes/no decisions
+            if context_rule_applied and applied_rule:
+                # Try to find option that better matches the context rule
+                if "yes" in applied_rule["recommendation"].lower():
+                    selected_option = yes_option
+                    logger.info("Context rule suggests 'yes' option")
+                elif "no" in applied_rule["recommendation"].lower():
+                    selected_option = no_option
+                    logger.info("Context rule suggests 'no' option")
+                else:
+                    # Use standard logic if the rule doesn't clearly suggest yes/no
+                    selected_option = yes_option if positive_count > negative_count else no_option
+            else:
+                # Select the option based on the counts
+                selected_option = yes_option if positive_count > negative_count else no_option
             
             if selected_option:
-                return {
+                response = {
                     "success": True,
                     "decision_point": current_dp,
                     "selected_option": selected_option,
@@ -440,8 +548,24 @@ def analyze_speech_for_decision(speech_text, protocol_id=None, time_period=None,
                     "next_decision_id": selected_option.next_decision_id,
                     "recommendation": selected_option.recommendation if selected_option.is_terminal else None,
                     "keywords": keywords,
-                    "is_emergency": is_emergency
+                    "is_emergency": is_emergency,
+                    # Include context data
+                    "time_period": time_period,
+                    "noise_level_db": noise_level_db,
+                    "is_transition_period": is_transition_period
                 }
+                
+                # If a context-specific rule was applied, include that information
+                if context_rule_applied and applied_rule:
+                    response["context_rule_applied"] = True
+                    response["context_rule"] = {
+                        "behavior": applied_rule["behavior"],
+                        "severity": applied_rule["severity"],
+                        "recommendation": applied_rule["recommendation"],
+                        "explanation": applied_rule["explanation"]
+                    }
+                
+                return response
             else:
                 return {
                     "success": False,
