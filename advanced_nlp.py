@@ -308,13 +308,17 @@ class BehaviorQueryProcessor:
         
         return result
     
-    def get_protocol_for_behavior(self, behavior_type, severity):
+    def get_protocol_for_behavior(self, behavior_type, severity, setting=None, time_period=None, noise_level_db=None):
         """
-        Get appropriate protocol ID for the identified behavior type and severity
+        Get appropriate protocol ID for the identified behavior type and severity,
+        with optional context parameters
         
         Parameters:
         - behavior_type: The identified behavior type key
         - severity: The identified severity level
+        - setting: Optional classroom setting (e.g., 'classroom', 'hallway')
+        - time_period: Optional time period from context sensor
+        - noise_level_db: Optional noise level from context sensor
         
         Returns:
         - protocol_id: ID of the recommended protocol
@@ -327,7 +331,47 @@ class BehaviorQueryProcessor:
         try:
             from models import BehaviorType, BehaviorProtocol, Protocol
             
-            # Convert snake_case to database format (if needed)
+            # Context-aware protocol selection
+            if time_period and noise_level_db:
+                # Special case for anxiety during quiet morning periods
+                if behavior_type.lower() == 'anxiety' and noise_level_db < -70 and 'morning' in time_period:
+                    # Look for SEL anxiety protocol
+                    sel_protocol = Protocol.query.filter(Protocol.name.like('%SEL%')).first()
+                    if sel_protocol:
+                        return sel_protocol.id, f"{sel_protocol.name} (Quiet Morning Context)"
+                
+                # Special case for disruption during noisy post-lunch periods
+                if behavior_type.lower() == 'disruption' and noise_level_db > -60 and 'lunch' in time_period:
+                    # Look for PBIS disruption protocol
+                    pbis_protocol = Protocol.query.filter(Protocol.name.like('%PBIS%')).first()
+                    if pbis_protocol:
+                        return pbis_protocol.id, f"{pbis_protocol.name} (Noisy Lunch Context)"
+                
+                # Use SAMA for risk behaviors and high noise levels
+                if behavior_type.lower() in ['aggression', 'risk behavior'] and noise_level_db > -65:
+                    sama_protocol = Protocol.query.filter(Protocol.name.like('%SAMA%')).first()
+                    if sama_protocol:
+                        return sama_protocol.id, f"{sama_protocol.name} (High Noise Context)"
+            
+            # Setting-specific protocol matching
+            if setting:
+                # Try to find a protocol specifically for this setting
+                behavior_type_db = BehaviorType.query.filter(BehaviorType.name.ilike(f"%{behavior_type}%")).first()
+                if behavior_type_db:
+                    # Check if we have a setting-specific protocol from PFISD data
+                    custom_protocol = self.db.session.execute(
+                        "SELECT p.id, p.name FROM protocols p "
+                        "JOIN decision_points dp ON p.id = dp.protocol_id "
+                        f"WHERE dp.question LIKE '%{setting}%' AND "
+                        f"dp.question LIKE '%{behavior_type}%' "
+                        "LIMIT 1"
+                    ).fetchone()
+                    
+                    if custom_protocol:
+                        return custom_protocol[0], f"{custom_protocol[1]} (Setting: {setting})"
+            
+            # Convert severity to database format
+            db_severity = severity.upper()
             behavior_name = behavior_type.replace('_', ' ')
             
             # Find the behavior type ID
@@ -372,13 +416,17 @@ class BehaviorQueryProcessor:
             logger.error(f"Error finding protocol for behavior: {str(e)}")
             return None, None
     
-    def get_recommendation_for_behavior(self, behavior_type, severity):
+    def get_recommendation_for_behavior(self, behavior_type, severity, setting=None, time_period=None, noise_level_db=None):
         """
-        Get appropriate recommendation for the identified behavior type and severity
+        Get appropriate recommendation for the identified behavior type and severity,
+        with optional context parameters
         
         Parameters:
         - behavior_type: The identified behavior type key
         - severity: The identified severity level
+        - setting: Optional classroom setting (e.g., 'classroom', 'hallway')
+        - time_period: Optional time period from context sensor
+        - noise_level_db: Optional noise level from context sensor
         
         Returns:
         - recommendation: Dictionary containing recommendation details
@@ -388,7 +436,7 @@ class BehaviorQueryProcessor:
             return None
         
         try:
-            from models import BehaviorType, Recommendation
+            from models import BehaviorType, Recommendation, Protocol, DecisionPoint, DecisionOption
             
             # Convert snake_case to database format (if needed)
             behavior_name = behavior_type.replace('_', ' ')

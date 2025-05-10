@@ -40,3 +40,21 @@ with app.app_context():
     # Create database tables
     db.create_all()
     logger.info("Database tables created")
+    
+    # Import protocol data if not already imported
+    try:
+        from import_protocols import run_imports
+        import os
+        
+        if os.path.exists('attached_assets/sama_protocols.csv'):
+            # Check if we already have protocols imported
+            from models import Protocol
+            if Protocol.query.count() < 5:  # Only import if we have fewer than 5 protocols
+                logger.info("Importing protocol data...")
+                run_imports()
+                logger.info("Protocol data import completed")
+            else:
+                logger.info("Protocol data already imported, skipping")
+    except Exception as e:
+        logger.error(f"Error importing protocols: {str(e)}")
+        # Continue even if import fails to ensure application starts
