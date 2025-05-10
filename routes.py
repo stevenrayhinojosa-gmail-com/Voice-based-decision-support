@@ -523,6 +523,241 @@ def get_model_fields(model_id):
             'error': str(e)
         })
 
+# Teacher Input Routes
+
+@app.route('/teacher-input', methods=['GET'])
+def teacher_input():
+    """Route for teacher input page with both text and voice options"""
+    return render_template('teacher_input.html',
+                          title="Behavioral Support for Teachers")
+
+@app.route('/process-teacher-input', methods=['POST'])
+def process_teacher_input():
+    """Process teacher input from either text or voice form"""
+    try:
+        input_type = request.form.get('input_type')
+        severity = request.form.get('severity')
+        
+        if input_type == 'text':
+            # Process text input
+            student_description = request.form.get('student_description', '')
+            behavior_description = request.form.get('behavior_description', '')
+            
+            if not behavior_description:
+                return jsonify({
+                    "success": False,
+                    "error": "Behavior description is required"
+                })
+                
+            # Use the behavior description for analysis
+            text_for_analysis = behavior_description
+            
+        elif input_type == 'voice':
+            # Process voice input
+            voice_transcript = request.form.get('voice_transcript', '')
+            
+            if not voice_transcript:
+                return jsonify({
+                    "success": False,
+                    "error": "Voice transcript is empty. Please try recording again."
+                })
+                
+            # Use the voice transcript for analysis
+            text_for_analysis = voice_transcript
+            
+        else:
+            return jsonify({
+                "success": False,
+                "error": "Invalid input type"
+            })
+            
+        # Get protocol - use the first one for simplicity
+        protocol = Protocol.query.first()
+        if not protocol:
+            return jsonify({
+                "success": False,
+                "error": "No protocols found in the system"
+            })
+            
+        # Extract keywords and analyze the text
+        keywords = extract_keywords_from_speech(text_for_analysis)
+        
+        # Adjust analysis based on severity
+        is_emergency = False
+        if severity == 'high':
+            is_emergency = True
+            
+        # Get recommendation based on the text and severity
+        # Use our existing analysis function
+        analysis_result = analyze_speech_for_decision(text_for_analysis, protocol.id)
+        
+        if analysis_result['success']:
+            recommendation = analysis_result['recommendation'] or "Follow standard classroom management protocols."
+            
+            return jsonify({
+                "success": True,
+                "recommendation_title": "Recommended Action",
+                "recommendation": recommendation,
+                "decision_point": analysis_result['decision_point'].question if 'decision_point' in analysis_result else None,
+                "is_emergency": analysis_result.get('is_emergency', is_emergency),
+                "keywords": keywords
+            })
+        else:
+            # Provide a general recommendation based on severity if analysis fails
+            general_recommendations = {
+                'low': "Monitor the situation. Use calm redirection and positive reinforcement strategies. Document the behavior if it persists.",
+                'medium': "Implement targeted behavior management strategies. Consider contacting parents/guardians if behavior continues. Document the incident.",
+                'high': "Immediate intervention required. Ensure student and classroom safety first. Get additional support if needed. Document the incident thoroughly."
+            }
+            
+            return jsonify({
+                "success": True,
+                "recommendation_title": "General Recommendation",
+                "recommendation": general_recommendations.get(severity, general_recommendations['medium']),
+                "is_emergency": severity == 'high',
+                "keywords": keywords
+            })
+            
+    except Exception as e:
+        logger.error(f"Error processing teacher input: {str(e)}")
+        return jsonify({
+            "success": False,
+            "error": f"An error occurred: {str(e)}"
+        })
+
+# Teacher rapid input interface
+@app.route('/rapid_input', methods=['GET', 'POST'])
+def rapid_input():
+    """Route for teachers to quickly input behavioral data and get recommendations"""
+    form = ProtocolForm()  # Reusing just for protocol selection, not creating
+    
+    # Get all protocols for selection
+    protocols = Protocol.query.all()
+    
+    if request.method == 'POST':
+        protocol_id = request.form.get('protocol_id')
+        behavior_text = request.form.get('behavior_text')
+        severity = request.form.get('severity')
+        
+        logger.info(f"Teacher input - Protocol: {protocol_id}, Behavior: {behavior_text}, Severity: {severity}")
+        
+        if not protocol_id or not behavior_text:
+            flash('Please select a protocol and provide behavior description', 'warning')
+            return render_template('teacher_input.html', 
+                                  protocols=protocols,
+                                  form=form,
+                                  title="Rapid Input")
+        
+        # Process the input through our decision model
+        analysis_result = analyze_speech_for_decision(behavior_text, int(protocol_id))
+        
+        if analysis_result['success']:
+            # Store the recommendation in session
+            recommendation = None
+            next_step = None
+            
+            if analysis_result['is_terminal']:
+                recommendation = analysis_result['recommendation']
+                # Save the recommendation for display
+                session['recommendation'] = recommendation
+            else:
+                # If not terminal, get the next decision point details
+                next_dp_id = analysis_result['next_decision_id']
+                next_dp = DecisionPoint.query.get(next_dp_id)
+                if next_dp:
+                    next_step = next_dp.question
+                    session['current_dp_id'] = next_dp_id
+            
+            # Store input for display on result page
+            session['behavior_text'] = behavior_text
+            session['severity'] = severity
+            session['keywords'] = analysis_result.get('keywords', [])
+            session['is_emergency'] = analysis_result.get('is_emergency', False)
+            session['current_protocol_id'] = int(protocol_id)
+            
+            # If there's a recommendation, go to results
+            if recommendation:
+                return redirect(url_for('rapid_result'))
+            # If there's a next step, continue the decision tree
+            elif next_step:
+                return redirect(url_for('decision_process'))
+            else:
+                flash('Unable to determine next step in protocol', 'danger')
+        else:
+            # If analysis failed, show the error
+            flash(f"Analysis error: {analysis_result.get('error', 'Unknown error')}", 'danger')
+    
+    return render_template('teacher_input.html', 
+                          protocols=protocols,
+                          form=form,
+                          title="Rapid Input")
+
+@app.route('/rapid_result')
+def rapid_result():
+    """Route for showing rapid recommendation results"""
+    # Check if a recommendation exists in the session
+    if 'recommendation' not in session:
+        flash('No recommendation available', 'warning')
+        return redirect(url_for('rapid_input'))
+    
+    # Get all stored session data
+    recommendation = session.get('recommendation')
+    behavior_text = session.get('behavior_text')
+    severity = session.get('severity')
+    keywords = session.get('keywords', [])
+    is_emergency = session.get('is_emergency', False)
+    protocol_id = session.get('current_protocol_id')
+    
+    protocol = Protocol.query.get_or_404(protocol_id) if protocol_id else None
+    
+    # Clear the session data
+    session.pop('recommendation', None)
+    session.pop('behavior_text', None)
+    session.pop('severity', None)
+    session.pop('keywords', None)
+    session.pop('is_emergency', None)
+    session.pop('current_protocol_id', None)
+    session.pop('current_dp_id', None)
+    
+    return render_template('teacher_result.html',
+                          recommendation=recommendation,
+                          behavior_text=behavior_text,
+                          severity=severity,
+                          keywords=keywords,
+                          is_emergency=is_emergency,
+                          protocol=protocol,
+                          title="Recommendation")
+
+@app.route('/api/voice_input', methods=['POST'])
+def voice_input():
+    """API endpoint for processing voice input from teachers"""
+    try:
+        # Check if the request contains JSON data
+        data = request.get_json() if request.is_json else {}
+        speech_text = data.get('speech_text', '')
+        protocol_id = data.get('protocol_id')
+        
+        if not speech_text or not protocol_id:
+            return jsonify({
+                "success": False,
+                "error": "Missing speech text or protocol ID"
+            })
+        
+        # Process through our decision model
+        analysis_result = analyze_speech_for_decision(speech_text, int(protocol_id))
+        
+        # Add the original speech text to the result
+        analysis_result['speech_text'] = speech_text
+        
+        return jsonify(analysis_result)
+        
+    except Exception as e:
+        logger.error(f"Error processing voice input: {str(e)}")
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        })
+
 # Voice recognition routes
 
 @app.route('/voice_decision_support', methods=['GET', 'POST'])

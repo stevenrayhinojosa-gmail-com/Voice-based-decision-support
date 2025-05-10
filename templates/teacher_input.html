@@ -1,0 +1,419 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <h1 class="mb-3">Teacher Behavioral Input</h1>
+            <p class="lead">Quickly describe a student's behavior and get recommendations</p>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8 offset-lg-2">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="mb-0"><i class="fas fa-clipboard-list me-2"></i> Behavior Report</h3>
+                </div>
+                <div class="card-body">
+                    <!-- Tabs for Text/Voice Input -->
+                    <ul class="nav nav-tabs mb-4" id="inputTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="text-tab" data-bs-toggle="tab" data-bs-target="#text-input" 
+                                   type="button" role="tab" aria-controls="text-input" aria-selected="true">
+                                <i class="fas fa-keyboard me-2"></i> Text Input
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="voice-tab" data-bs-toggle="tab" data-bs-target="#voice-input" 
+                                   type="button" role="tab" aria-controls="voice-input" aria-selected="false">
+                                <i class="fas fa-microphone me-2"></i> Voice Input
+                            </button>
+                        </li>
+                    </ul>
+                    
+                    <div class="tab-content" id="inputTabsContent">
+                        <!-- Text Input Tab -->
+                        <div class="tab-pane fade show active" id="text-input" role="tabpanel" aria-labelledby="text-tab">
+                            <form method="POST" action="{{ url_for('teacher_input') }}">
+                                <div class="mb-4">
+                                    <label for="protocol_id" class="form-label fw-bold">Select Protocol:</label>
+                                    <select class="form-select" id="protocol_id" name="protocol_id" required>
+                                        <option value="" selected disabled>Choose a behavioral protocol...</option>
+                                        {% for protocol in protocols %}
+                                        <option value="{{ protocol.id }}">{{ protocol.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <div class="form-text">
+                                        Choose the appropriate protocol for this behavioral situation
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-4">
+                                    <label for="behavior_text" class="form-label fw-bold">Behavior Description:</label>
+                                    <textarea class="form-control" id="behavior_text" name="behavior_text" rows="4" 
+                                              placeholder="Describe the student's behavior in detail..." required></textarea>
+                                    <div class="form-text">
+                                        Include relevant details about context, triggers, and student responses
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-4">
+                                    <label for="severity" class="form-label fw-bold">Severity Level:</label>
+                                    <select class="form-select" id="severity" name="severity">
+                                        <option value="mild">Mild - Minor disruption</option>
+                                        <option value="moderate" selected>Moderate - Notable disruption</option>
+                                        <option value="serious">Serious - Significant disruption</option>
+                                        <option value="severe">Severe - Safety concern</option>
+                                        <option value="critical">Critical - Emergency</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="d-grid">
+                                    <button type="submit" class="btn btn-primary btn-lg">
+                                        <i class="fas fa-paper-plane me-2"></i> Get Recommendation
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                        
+                        <!-- Voice Input Tab -->
+                        <div class="tab-pane fade" id="voice-input" role="tabpanel" aria-labelledby="voice-tab">
+                            <div class="voice-input-container">
+                                <div class="mb-4">
+                                    <label for="voice_protocol_id" class="form-label fw-bold">Select Protocol:</label>
+                                    <select class="form-select" id="voice_protocol_id" required>
+                                        <option value="" selected disabled>Choose a behavioral protocol...</option>
+                                        {% for protocol in protocols %}
+                                        <option value="{{ protocol.id }}">{{ protocol.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                
+                                <div class="mb-4">
+                                    <label for="voice_severity" class="form-label fw-bold">Severity Level:</label>
+                                    <select class="form-select" id="voice_severity">
+                                        <option value="mild">Mild - Minor disruption</option>
+                                        <option value="moderate" selected>Moderate - Notable disruption</option>
+                                        <option value="serious">Serious - Significant disruption</option>
+                                        <option value="severe">Severe - Safety concern</option>
+                                        <option value="critical">Critical - Emergency</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="voice-control-area text-center p-4 mb-4">
+                                    <div id="microphone-icon" class="mb-3">
+                                        <i class="fas fa-microphone" style="font-size: 3rem; color: var(--bs-primary);"></i>
+                                    </div>
+                                    
+                                    <div id="voice-status" class="voice-status-container mb-3">
+                                        <div class="alert alert-info">
+                                            Click the button below to start voice recognition
+                                        </div>
+                                    </div>
+                                    
+                                    <button type="button" id="record-voice-btn" class="btn btn-primary btn-lg">
+                                        <i class="fas fa-microphone me-2"></i> Start Voice Recording
+                                    </button>
+                                    
+                                    <div class="mt-3" id="transcript-container" style="display: none;">
+                                        <label for="voice_transcript" class="form-label fw-bold">Your Description:</label>
+                                        <textarea id="voice_transcript" class="form-control" rows="4" readonly></textarea>
+                                    </div>
+                                    
+                                    <div class="mt-3 d-grid" id="submit-voice-container" style="display: none;">
+                                        <button type="button" id="submit-voice-btn" class="btn btn-success btn-lg">
+                                            <i class="fas fa-paper-plane me-2"></i> Submit Voice Analysis
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                <div id="voice-analysis-result" class="mt-4"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card-footer bg-light">
+                    <div class="alert alert-info mb-0">
+                        <div class="d-flex">
+                            <div class="me-3">
+                                <i class="fas fa-info-circle fa-2x"></i>
+                            </div>
+                            <div>
+                                <strong>Quick Help:</strong>
+                                <p class="mb-0">
+                                    Describe the student's behavior in as much detail as possible. Include information 
+                                    about what happened before the behavior, intensity, duration, and any safety concerns.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Voice recognition elements
+    const recordBtn = document.getElementById('record-voice-btn');
+    const voiceStatus = document.getElementById('voice-status');
+    const voiceTranscript = document.getElementById('voice_transcript');
+    const voiceProtocolSelect = document.getElementById('voice_protocol_id');
+    const voiceSeveritySelect = document.getElementById('voice_severity');
+    const transcriptContainer = document.getElementById('transcript-container');
+    const submitVoiceBtn = document.getElementById('submit-voice-btn');
+    const submitVoiceContainer = document.getElementById('submit-voice-container');
+    const voiceAnalysisResult = document.getElementById('voice-analysis-result');
+    
+    // Check if browser supports Web Speech API
+    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+        // Use the browser's SpeechRecognition interface
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        const recognition = new SpeechRecognition();
+        
+        // Configure recognition
+        recognition.continuous = false;
+        recognition.interimResults = true;
+        recognition.lang = 'en-US';
+        
+        // Variables to track state
+        let isRecording = false;
+        let finalTranscript = '';
+        let interimTranscript = '';
+        
+        // Event listeners for recognition
+        recognition.onstart = function() {
+            isRecording = true;
+            voiceStatus.innerHTML = `
+                <div class="alert alert-info">
+                    <div class="spinner-border spinner-border-sm me-2" role="status">
+                        <span class="visually-hidden">Listening...</span>
+                    </div>
+                    Listening... Speak clearly and describe the student's behavior
+                </div>
+            `;
+            recordBtn.innerHTML = '<i class="fas fa-stop me-2"></i> Stop Recording';
+            recordBtn.classList.remove('btn-primary');
+            recordBtn.classList.add('btn-danger');
+        };
+        
+        recognition.onresult = function(event) {
+            interimTranscript = '';
+            
+            for (let i = event.resultIndex; i < event.results.length; ++i) {
+                if (event.results[i].isFinal) {
+                    finalTranscript += event.results[i][0].transcript;
+                } else {
+                    interimTranscript += event.results[i][0].transcript;
+                }
+            }
+            
+            // Show and update transcript
+            transcriptContainer.style.display = 'block';
+            voiceTranscript.value = finalTranscript + interimTranscript;
+        };
+        
+        recognition.onerror = function(event) {
+            isRecording = false;
+            voiceStatus.innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-circle me-2"></i>
+                    Error: ${event.error}. Please try again.
+                </div>
+            `;
+            resetRecordButton();
+        };
+        
+        recognition.onend = function() {
+            isRecording = false;
+            resetRecordButton();
+            
+            if (finalTranscript) {
+                voiceStatus.innerHTML = `
+                    <div class="alert alert-success">
+                        <i class="fas fa-check-circle me-2"></i>
+                        Voice captured successfully! Review your description below.
+                    </div>
+                `;
+                submitVoiceContainer.style.display = 'block';
+            } else {
+                voiceStatus.innerHTML = `
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        No speech detected. Please try again.
+                    </div>
+                `;
+            }
+        };
+        
+        // Toggle recording when button is clicked
+        recordBtn.addEventListener('click', function() {
+            if (isRecording) {
+                recognition.stop();
+            } else {
+                // Check if protocol is selected
+                if (!voiceProtocolSelect.value) {
+                    voiceStatus.innerHTML = `
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            Please select a protocol first.
+                        </div>
+                    `;
+                    return;
+                }
+                
+                finalTranscript = '';
+                interimTranscript = '';
+                voiceTranscript.value = '';
+                recognition.start();
+            }
+        });
+        
+        // Submit voice transcript for analysis
+        submitVoiceBtn.addEventListener('click', function() {
+            // Check if protocol and transcript are available
+            if (!voiceProtocolSelect.value || !voiceTranscript.value.trim()) {
+                voiceStatus.innerHTML = `
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Please select a protocol and provide a voice description.
+                    </div>
+                `;
+                return;
+            }
+            
+            // Show loading state
+            voiceAnalysisResult.innerHTML = `
+                <div class="alert alert-info">
+                    <div class="spinner-border spinner-border-sm me-2" role="status">
+                        <span class="visually-hidden">Analyzing...</span>
+                    </div>
+                    Analyzing your description...
+                </div>
+            `;
+            
+            // Send to API for analysis
+            fetch('/api/voice_input', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    speech_text: voiceTranscript.value,
+                    protocol_id: voiceProtocolSelect.value,
+                    severity: voiceSeveritySelect.value
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Format the results nicely
+                    const keywordList = data.keywords && data.keywords.length > 0 
+                        ? data.keywords.map(k => `<span class="keywords-detected">${k}</span>`).join(' ')
+                        : '<em>No specific keywords detected</em>';
+                    
+                    let resultHTML = `
+                        <div class="card border-${data.is_emergency ? 'danger' : 'success'} mb-3">
+                            <div class="card-header bg-${data.is_emergency ? 'danger' : 'success'} text-white">
+                                <h5 class="mb-0">
+                                    ${data.is_emergency 
+                                        ? '<i class="fas fa-exclamation-triangle me-2"></i> Emergency Situation Detected' 
+                                        : '<i class="fas fa-check-circle me-2"></i> Analysis Complete'}
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <h6>Your description:</h6>
+                                    <p class="border-bottom pb-2">"${data.speech_text}"</p>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <h6>Decision point:</h6>
+                                    <p class="fw-bold">${data.decision_point.question}</p>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <h6>Selected option:</h6>
+                                    <p>${data.selected_option.text}</p>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <h6>Keywords detected:</h6>
+                                    <div>${keywordList}</div>
+                                </div>
+                    `;
+                    
+                    // Add recommendation if terminal
+                    if (data.is_terminal && data.recommendation) {
+                        resultHTML += `
+                            <div class="alert alert-${data.is_emergency ? 'danger' : 'info'} mt-3">
+                                <h6><i class="fas fa-lightbulb me-2"></i> Recommendation:</h6>
+                                <p class="mb-0">${data.recommendation}</p>
+                            </div>
+                        `;
+                    }
+                    
+                    resultHTML += `
+                            </div>
+                            <div class="card-footer">
+                                <div class="d-grid">
+                                    <form method="POST" action="${window.location.pathname}">
+                                        <input type="hidden" name="protocol_id" value="${data.decision_point.protocol_id}">
+                                        <input type="hidden" name="behavior_text" value="${data.speech_text}">
+                                        <input type="hidden" name="severity" value="${voiceSeveritySelect.value}">
+                                        <button type="submit" class="btn btn-primary">
+                                            ${data.is_terminal 
+                                                ? '<i class="fas fa-check me-2"></i> Accept Recommendation' 
+                                                : '<i class="fas fa-arrow-right me-2"></i> Continue Decision Process'}
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    
+                    voiceAnalysisResult.innerHTML = resultHTML;
+                } else {
+                    // Show error message
+                    voiceAnalysisResult.innerHTML = `
+                        <div class="alert alert-danger">
+                            <i class="fas fa-exclamation-circle me-2"></i>
+                            Error analyzing voice input: ${data.error || 'Unknown error'}
+                        </div>
+                    `;
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                voiceAnalysisResult.innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-circle me-2"></i>
+                        Error communicating with server: ${error.message}
+                    </div>
+                `;
+            });
+        });
+        
+        function resetRecordButton() {
+            recordBtn.innerHTML = '<i class="fas fa-microphone me-2"></i> Start Voice Recording';
+            recordBtn.classList.remove('btn-danger');
+            recordBtn.classList.add('btn-primary');
+        }
+    } else {
+        // Browser doesn't support speech recognition
+        voiceStatus.innerHTML = `
+            <div class="alert alert-warning">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                Your browser doesn't support voice recognition. Please use Chrome or Edge.
+            </div>
+        `;
+        recordBtn.disabled = true;
+    }
+});
+</script>
+{% endblock %}
