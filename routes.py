@@ -1066,18 +1066,57 @@ def voice_input_process():
             simulated_speech = request.form.get('simulated_speech', '')
             
             if simulated_speech:
-                # Analyze the speech for decision mapping
-                analysis_result = analyze_speech_for_decision(simulated_speech, protocol_id)
+                # Get context data from the context sensor
+                from context_sensors import context_sensor
+                context_data = context_sensor.get_context_data()
+                time_period = context_data['time_period']['name']
+                noise_level = context_data['noise_level_db']
+                is_transition = context_data['time_period']['is_transition']
+                
+                # Log the context data
+                logger.info(f"Context data during voice input: Time: {time_period}, Noise: {noise_level}dB, Is Transition: {is_transition}")
+                
+                # Analyze the speech with context data for decision mapping
+                analysis_result = analyze_speech_for_decision(
+                    simulated_speech, 
+                    protocol_id,
+                    time_period=time_period,
+                    noise_level_db=noise_level,
+                    is_transition_period=is_transition
+                )
                 
                 if analysis_result['success']:
+                    # Save behavioral data with context information
+                    try:
+                        behavior_data = BehavioralData(
+                            subject_id='anonymous',  # Anonymous subject for voice input
+                            behavior_description=simulated_speech,
+                            protocol_used=protocol_id,
+                            time_period=time_period,
+                            noise_level_db=noise_level,
+                            context=f"Voice input during {time_period} period",
+                            intensity=8 if analysis_result.get('is_emergency', False) else 5  # Estimated intensity
+                        )
+                        db.session.add(behavior_data)
+                        db.session.commit()
+                        logger.info(f"Saved behavioral data with context: ID={behavior_data.id}")
+                    except Exception as e:
+                        logger.error(f"Error saving behavior data: {str(e)}")
+                    
                     # If it's a terminal option, set the recommendation
                     if analysis_result['is_terminal']:
                         session['recommendation'] = analysis_result['recommendation']
+                        # Add context data to session
+                        session['time_period'] = time_period
+                        session['noise_level_db'] = noise_level
+                        session['is_transition_period'] = is_transition
                         return redirect(url_for('decision_result'))
                     else:
                         # If not terminal, proceed to the next decision point
                         session['current_dp_id'] = analysis_result['next_decision_id']
                         flash(f"Voice analyzed: '{simulated_speech}'. Proceeding with option: {analysis_result['selected_option'].text}", 'success')
+                        # Display contextual information
+                        flash(f"Context: {time_period.replace('-', ' ').title()}, Noise level: {noise_level}dB", 'info')
                         return redirect(url_for('decision_process'))
                 else:
                     # If analysis failed, show the error
@@ -1091,6 +1130,29 @@ def voice_input_process():
                           protocol=protocol,
                           title="Voice Input Processing")
 
+@app.route('/api/context_data', methods=['GET'])
+def get_context_data():
+    """API endpoint for retrieving current context data"""
+    try:
+        # Import the context_sensor singleton from the context_sensors module
+        from context_sensors import context_sensor
+        
+        # Get fresh context data
+        context_data = context_sensor.get_context_data()
+        
+        # Return the data as JSON with success flag
+        return jsonify({
+            'success': True,
+            'time_period': context_data['time_period'],
+            'noise_level_db': context_data['noise_level_db']
+        })
+    except Exception as e:
+        logger.error(f"Error getting context data: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        })
+
 @app.route('/api/voice_capture', methods=['POST'])
 def voice_capture():
     """API endpoint for capturing voice input"""
@@ -1101,13 +1163,26 @@ def voice_capture():
         # For demo purposes, simulate a successful voice recognition
         # Check if the request contains JSON data
         if request.is_json:
-            simulated_text = request.json.get('simulated_text', 'The student is becoming agitated and disruptive in class')
+            simulated_text = request.json.get('text', 'The student is becoming agitated and disruptive in class')
         else:
             simulated_text = 'The student is becoming agitated and disruptive in class'
-            
+        
+        # Get context data for enhanced analysis
+        from context_sensors import context_sensor
+        context_data = context_sensor.get_context_data()
+        time_period = context_data['time_period']['name']
+        noise_level = context_data['noise_level_db']
+        is_transition = context_data['time_period']['is_transition']
+        
+        # Enhanced result with context data
         result = {
             "success": True,
-            "text": simulated_text
+            "text": simulated_text,
+            "context": {
+                "time_period": time_period,
+                "noise_level_db": noise_level,
+                "is_transition_period": is_transition
+            }
         }
         
         if result["success"]:

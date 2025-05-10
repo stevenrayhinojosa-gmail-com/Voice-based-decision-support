@@ -58,6 +58,24 @@
                     </form>
                 </div>
                 
+                <!-- Contextual Information -->
+                <div class="card bg-light mb-4">
+                    <div class="card-header">
+                        <h6 class="mb-0"><i class="fas fa-map-marker-alt me-2"></i> Current Context Information</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row" id="context-data-container">
+                            <!-- Context data will be loaded here via JavaScript -->
+                            <div class="col-12 text-center py-3">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="visually-hidden">Loading context data...</span>
+                                </div>
+                                <p class="mt-2 text-muted">Loading contextual information...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
                 <div class="alert alert-secondary">
                     <div class="mb-2"><strong>Helpful cues to include in your description:</strong></div>
                     <ul class="mb-0 small">
@@ -91,6 +109,104 @@ document.addEventListener('DOMContentLoaded', function() {
     const recordButton = document.getElementById('start-voice-btn');
     const speechTextarea = document.getElementById('simulated_speech');
     const voiceForm = document.getElementById('voice-form');
+    const contextDataContainer = document.getElementById('context-data-container');
+    
+    // Function to load and display context data
+    function loadContextData() {
+        // Make a request to get context data from server
+        fetch('/api/context_data')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Format time period to be more readable
+                    const timePeriod = data.time_period.name.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                    const isTransition = data.time_period.is_transition;
+                    const noiseLevel = data.noise_level_db;
+                    
+                    // Determine noise level classification
+                    let noiseClass, noiseBadge;
+                    if (noiseLevel > -40) {
+                        noiseClass = 'danger';
+                        noiseBadge = 'High Noise';
+                    } else if (noiseLevel > -60) {
+                        noiseClass = 'warning';
+                        noiseBadge = 'Moderate Noise';
+                    } else {
+                        noiseClass = 'success';
+                        noiseBadge = 'Low Noise';
+                    }
+                    
+                    // Update the context data container
+                    contextDataContainer.innerHTML = `
+                        <div class="col-md-6 mb-3">
+                            <div class="d-flex align-items-center">
+                                <div class="me-3">
+                                    <i class="fas fa-clock text-primary" style="font-size: 1.5rem;"></i>
+                                </div>
+                                <div>
+                                    <h6 class="mb-0">Time Period</h6>
+                                    <p class="mb-0">${timePeriod}</p>
+                                    ${isTransition ? 
+                                        '<span class="badge bg-warning text-dark mt-1">Transition Period</span>' : 
+                                        '<span class="badge bg-info text-white mt-1">Class Time</span>'}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <div class="d-flex align-items-center">
+                                <div class="me-3">
+                                    <i class="fas fa-volume-up text-primary" style="font-size: 1.5rem;"></i>
+                                </div>
+                                <div>
+                                    <h6 class="mb-0">Ambient Noise</h6>
+                                    <p class="mb-0">${noiseLevel} dB</p>
+                                    <span class="badge bg-${noiseClass} ${noiseClass === 'warning' ? 'text-dark' : ''} mt-1">${noiseBadge}</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-12 mt-2">
+                            <div class="alert alert-info mb-0 py-2 small">
+                                <i class="fas fa-info-circle me-2"></i>
+                                These contextual factors will be considered when generating recommendations.
+                                ${isTransition ? 
+                                    '<strong>Note:</strong> Transition periods often involve more behavioral challenges.' : ''}
+                                ${noiseLevel > -50 ? 
+                                    '<strong>Note:</strong> Higher noise levels may contribute to sensory overload or attention issues.' : ''}
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    // Show error if context data couldn't be loaded
+                    contextDataContainer.innerHTML = `
+                        <div class="col-12">
+                            <div class="alert alert-warning">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                Could not load contextual data. Recommendations will be based on behavior description only.
+                            </div>
+                        </div>
+                    `;
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching context data:', error);
+                contextDataContainer.innerHTML = `
+                    <div class="col-12">
+                        <div class="alert alert-danger">
+                            <i class="fas fa-exclamation-circle me-2"></i>
+                            Error loading contextual data: ${error.message}
+                        </div>
+                    </div>
+                `;
+            });
+    }
+    
+    // Load context data when page loads
+    loadContextData();
+    
+    // Refresh context data every 60 seconds
+    setInterval(loadContextData, 60000);
     
     // Initialize voice recognition using our helper function
     // In a hybrid approach, we're using the browser's SpeechRecognition API for client-side voice capture

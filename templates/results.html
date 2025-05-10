@@ -46,6 +46,64 @@
                     {{ recommendation }}
                 </div>
                 
+                <!-- Contextual Information (if available) -->
+                {% if session.get('time_period') or session.get('noise_level_db') %}
+                <div class="card bg-light mb-4">
+                    <div class="card-header">
+                        <h6 class="mb-0"><i class="fas fa-map-marker-alt me-2"></i> Contextual Factors</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            {% if session.get('time_period') %}
+                            <div class="col-md-6 mb-3">
+                                <div class="d-flex align-items-center">
+                                    <div class="me-3">
+                                        <i class="fas fa-clock text-primary" style="font-size: 1.5rem;"></i>
+                                    </div>
+                                    <div>
+                                        <h6 class="mb-0">Time Period</h6>
+                                        <p class="mb-0 small">{{ session.get('time_period')|replace('-', ' ')|title }}</p>
+                                        {% if session.get('is_transition_period') %}
+                                        <span class="badge bg-warning text-dark mt-1">Transition Period</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            {% endif %}
+                            
+                            {% if session.get('noise_level_db') %}
+                            <div class="col-md-6 mb-3">
+                                <div class="d-flex align-items-center">
+                                    <div class="me-3">
+                                        <i class="fas fa-volume-up text-primary" style="font-size: 1.5rem;"></i>
+                                    </div>
+                                    <div>
+                                        <h6 class="mb-0">Ambient Noise Level</h6>
+                                        <p class="mb-0 small">{{ session.get('noise_level_db') }} dB</p>
+                                        {% if session.get('noise_level_db') > -40 %}
+                                        <span class="badge bg-danger mt-1">High Noise Environment</span>
+                                        {% elif session.get('noise_level_db') > -60 %}
+                                        <span class="badge bg-warning text-dark mt-1">Moderate Noise</span>
+                                        {% else %}
+                                        <span class="badge bg-success mt-1">Low Noise Environment</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="alert alert-info mt-2 mb-0 small">
+                            <i class="fas fa-info-circle me-2"></i>
+                            Contextual factors were considered in generating this recommendation.
+                            {% if session.get('is_transition_period') %}
+                            <strong>Transition periods</strong> may involve higher noise levels and more behavioral challenges.
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+                
                 {% elif prediction %}
                 <!-- ML Prediction Result -->
                 <div class="mb-4">

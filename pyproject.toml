@@ -19,6 +19,7 @@ dependencies = [
     "speechrecognition>=3.14.2",
     "pyaudio>=0.2.14",
     "nltk>=3.9.1",
+    "sounddevice>=0.5.1",
 ]
 
 [[tool.uv.index]]

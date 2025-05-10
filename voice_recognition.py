@@ -3,6 +3,7 @@ import logging
 import threading
 import time
 from flask import session
+from context_sensors import context_sensor  # Import the context sensor
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -107,17 +108,40 @@ class VoiceRecognizer:
         Process voice input specifically for decision support
         If protocol_id is provided, it will be used; otherwise,
         it will try to get it from the session
+        
+        Now includes context sensing for time-of-day and ambient noise
         """
+        # Get time period before voice capture
+        context_data = context_sensor.get_context_data()
+        time_period = context_data['time_period']['name']
+        
+        # Capture voice input
         voice_result = self.listen_once()
         
+        # If voice recognition failed, still include context data
         if not voice_result["success"]:
+            voice_result.update({
+                "time_period": time_period,
+                "noise_level_db": context_data['noise_level_db']
+            })
             return voice_result
+        
+        # Get noise level from the context sensor
+        # Note: We already measured ambient noise during initialization,
+        # but we take a fresh sample here for the current conditions
+        noise_level = context_data['noise_level_db']
+        
+        # Add context data to result
+        logger.info(f"Context data: Time period = {time_period}, Noise level = {noise_level} dB")
             
-        # Return the recognized text along with the protocol context
+        # Return the recognized text along with the protocol context and environmental context
         return {
             "success": True,
             "text": voice_result["text"],
-            "protocol_id": protocol_id or session.get('current_protocol_id')
+            "protocol_id": protocol_id or session.get('current_protocol_id'),
+            "time_period": time_period,
+            "noise_level_db": noise_level,
+            "is_transition_period": context_data['time_period']['is_transition']
         }
 
 # Create a global instance for use across the application
@@ -198,10 +222,17 @@ def extract_keywords_from_speech(speech_text):
     
     return keywords
 
-def analyze_speech_for_decision(speech_text, protocol_id=None):
+def analyze_speech_for_decision(speech_text, protocol_id=None, time_period=None, noise_level_db=None, is_transition_period=False):
     """
     Analyze speech text and map it to decision points in a protocol
-    Returns the appropriate option based on the speech content
+    Returns the appropriate option based on the speech content and context data
+    
+    Parameters:
+    - speech_text: The recognized speech text
+    - protocol_id: The ID of the protocol to use
+    - time_period: The current school time period (e.g., "morning-block-1", "lunch")
+    - noise_level_db: The ambient noise level in decibels
+    - is_transition_period: Whether the current time period is a transition period
     """
     from models import Protocol, DecisionPoint, DecisionOption
     
@@ -342,6 +373,23 @@ def analyze_speech_for_decision(speech_text, protocol_id=None):
                     break
             
             if selected_option:
+                # Adjust decision weight based on context
+                adjusted_confidence = max_matches / (len(keywords) if keywords else 1)
+                
+                # Context-aware adjustments
+                # Increase confidence if in a transition period and there are behavior keywords
+                if is_transition_period and any(k in keywords for k in decision_mapping.get(3, {}).get("keywords", {}).get("yes", [])):
+                    # During transitions, behavioral issues are more common
+                    logger.info("Adjusting confidence due to transition period")
+                    adjusted_confidence *= 1.2
+                    
+                # If noise level is high and keywords suggest a crisis, increase emergency confidence
+                if noise_level_db and noise_level_db > -30:  # -30dB threshold for noisy environments
+                    # In louder environments, safety concerns become more critical
+                    logger.info(f"Considering high noise level ({noise_level_db} dB) in decision making")
+                    if is_emergency:
+                        adjusted_confidence *= 1.1
+                
                 return {
                     "success": True,
                     "decision_point": current_dp,
@@ -352,7 +400,12 @@ def analyze_speech_for_decision(speech_text, protocol_id=None):
                     "keywords": keywords,
                     "is_emergency": is_emergency,
                     "matched_intent": best_match,
-                    "confidence": max_matches / (len(keywords) if keywords else 1)
+                    "confidence": adjusted_confidence,
+                    # Include context data in the response
+                    "time_period": time_period,
+                    "noise_level_db": noise_level_db,
+                    "is_transition_period": is_transition_period,
+                    "context_adjusted": True
                 }
             else:
                 # Fallback if we couldn't map to a specific option

@@ -79,6 +79,8 @@ class BehavioralData(db.Model):
     protocol_used = db.Column(db.Integer, db.ForeignKey('protocol.id'), nullable=True)
     outcome = db.Column(db.Text, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    time_period = db.Column(db.String(50), nullable=True)  # School time period (e.g., "pre-class", "recess")
+    noise_level_db = db.Column(db.Float, nullable=True)  # Ambient noise level in decibels
     
     def __repr__(self):
         return f'<BehavioralData {self.subject_id}>'
