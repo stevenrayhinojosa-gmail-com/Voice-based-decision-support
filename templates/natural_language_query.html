@@ -1,0 +1,59 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <h1 class="mb-3">Natural Language Query</h1>
+            <p class="lead">Ask a question about a behavioral situation in natural language</p>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8 offset-lg-2">
+            <div class="card shadow mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="mb-0">
+                        <i class="fas fa-question-circle me-2"></i>
+                        Ask a Question
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('natural_language_query') }}">
+                        <div class="mb-4">
+                            <label for="query" class="form-label fw-bold">Your Question:</label>
+                            <textarea class="form-control" id="query" name="query" rows="4" 
+                                placeholder="Describe a behavioral situation or ask a question like 'What should I do if a student refuses to follow directions?'" required></textarea>
+                            <div class="form-text">
+                                Be specific about the behavior you're observing and any context that might be relevant
+                            </div>
+                        </div>
+                        
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="fas fa-search me-2"></i> Get Recommendation
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <div class="card shadow">
+                <div class="card-header bg-light">
+                    <h4 class="mb-0"><i class="fas fa-lightbulb me-2"></i> Example Questions</h4>
+                </div>
+                <div class="card-body">
+                    <p class="mb-3">Here are some examples of questions you can ask:</p>
+                    <ul class="mb-0">
+                        <li class="mb-2">"What should I do if a student is throwing items in class?"</li>
+                        <li class="mb-2">"How do I handle a situation where a student is refusing to do any work?"</li>
+                        <li class="mb-2">"A student is having an emotional meltdown. What steps should I take?"</li>
+                        <li class="mb-2">"What protocol should I follow when a student runs out of the classroom?"</li>
+                        <li>"What are the best strategies for a student who is arguing with peers?"</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
