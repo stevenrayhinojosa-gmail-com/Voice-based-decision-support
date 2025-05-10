@@ -1,0 +1,238 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <h1 class="mb-4">Dashboard</h1>
+        <p class="lead">Overview of behavioral data and decision support metrics</p>
+    </div>
+</div>
+
+<!-- Stats Cards -->
+<div class="row mb-4">
+    <div class="col-md-4 mb-3">
+        <div class="card text-white bg-primary">
+            <div class="card-body">
+                <div class="row align-items-center">
+                    <div class="col-3">
+                        <i class="fas fa-sitemap fa-3x"></i>
+                    </div>
+                    <div class="col-9 text-end">
+                        <h3 class="card-title">{{ protocol_count }}</h3>
+                        <p class="card-text mb-0">Protocols</p>
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer bg-transparent border-0 text-end">
+                <a href="{{ url_for('protocols') }}" class="text-white text-decoration-none">
+                    <small>View Protocols <i class="fas fa-arrow-right ms-1"></i></small>
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4 mb-3">
+        <div class="card text-white bg-success">
+            <div class="card-body">
+                <div class="row align-items-center">
+                    <div class="col-3">
+                        <i class="fas fa-database fa-3x"></i>
+                    </div>
+                    <div class="col-9 text-end">
+                        <h3 class="card-title">{{ data_count }}</h3>
+                        <p class="card-text mb-0">Data Entries</p>
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer bg-transparent border-0 text-end">
+                <a href="{{ url_for('data_entry') }}" class="text-white text-decoration-none">
+                    <small>Add Data <i class="fas fa-arrow-right ms-1"></i></small>
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4 mb-3">
+        <div class="card text-white bg-info">
+            <div class="card-body">
+                <div class="row align-items-center">
+                    <div class="col-3">
+                        <i class="fas fa-chart-pie fa-3x"></i>
+                    </div>
+                    <div class="col-9 text-end">
+                        <h3 class="card-title">{{ model_count }}</h3>
+                        <p class="card-text mb-0">ML Models</p>
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer bg-transparent border-0 text-end">
+                <a href="{{ url_for('analyze') }}" class="text-white text-decoration-none">
+                    <small>View Models <i class="fas fa-arrow-right ms-1"></i></small>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <!-- Quick Action Buttons -->
+    <div class="col-md-12 mb-4 text-center">
+        <a href="{{ url_for('decision_support') }}" class="btn btn-primary me-2">
+            <i class="fas fa-lightbulb me-1"></i> Start Decision Support
+        </a>
+        <a href="{{ url_for('data_entry') }}" class="btn btn-success me-2">
+            <i class="fas fa-plus me-1"></i> Add Behavioral Data
+        </a>
+        <a href="{{ url_for('protocols') }}" class="btn btn-info me-2">
+            <i class="fas fa-sitemap me-1"></i> Manage Protocols
+        </a>
+        <a href="{{ url_for('analyze') }}" class="btn btn-secondary">
+            <i class="fas fa-chart-line me-1"></i> Analyze Data
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Recent Protocols -->
+    <div class="col-md-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-sitemap me-2"></i> Recent Protocols</h5>
+                <a href="{{ url_for('protocols') }}" class="btn btn-sm btn-primary">View All</a>
+            </div>
+            <div class="card-body">
+                {% if latest_protocols %}
+                <div class="list-group">
+                    {% for protocol in latest_protocols %}
+                    <a href="{{ url_for('protocol_detail', protocol_id=protocol.id) }}" class="list-group-item list-group-item-action">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h5 class="mb-1">{{ protocol.name }}</h5>
+                            <small>{{ protocol.created_at.strftime('%Y-%m-%d') }}</small>
+                        </div>
+                        <p class="mb-1">{{ protocol.description[:100] }}{% if protocol.description|length > 100 %}...{% endif %}</p>
+                        <small>Category: {{ protocol.category or 'Uncategorized' }}</small>
+                    </a>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i> No protocols created yet.
+                    <a href="{{ url_for('protocols') }}" class="alert-link">Create your first protocol</a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Recent Data Entries -->
+    <div class="col-md-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-database me-2"></i> Recent Data Entries</h5>
+                <a href="{{ url_for('data_entry') }}" class="btn btn-sm btn-success">Add Data</a>
+            </div>
+            <div class="card-body">
+                {% if latest_data %}
+                <div class="list-group">
+                    {% for entry in latest_data %}
+                    <div class="list-group-item">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h5 class="mb-1">Subject: {{ entry.subject_id }}</h5>
+                            <small>{{ entry.created_at.strftime('%Y-%m-%d %H:%M') }}</small>
+                        </div>
+                        <p class="mb-1">{{ entry.behavior_description[:100] }}{% if entry.behavior_description|length > 100 %}...{% endif %}</p>
+                        <div class="d-flex justify-content-between align-items-center mt-2">
+                            <small>Context: {{ entry.context or 'Not specified' }}</small>
+                            {% if entry.intensity %}
+                            <span class="badge bg-{{ 'danger' if entry.intensity > 7 else 'warning' if entry.intensity > 4 else 'success' }}">
+                                Intensity: {{ entry.intensity }}/10
+                            </span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i> No behavioral data entries yet.
+                    <a href="{{ url_for('data_entry') }}" class="alert-link">Add your first data entry</a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Recent ML Models -->
+    <div class="col-md-12 mb-4">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-chart-pie me-2"></i> ML Models</h5>
+                <a href="{{ url_for('analyze') }}" class="btn btn-sm btn-info">Train New Model</a>
+            </div>
+            <div class="card-body">
+                {% if latest_models %}
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Type</th>
+                                <th>Target</th>
+                                <th>Performance</th>
+                                <th>Created</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for model in latest_models %}
+                            <tr>
+                                <td>{{ model.name }}</td>
+                                <td>
+                                    <span class="badge bg-{{ 'primary' if model.model_type == 'decision_tree' else 'info' }}">
+                                        {{ model.model_type.replace('_', ' ').title() }}
+                                    </span>
+                                </td>
+                                <td>{{ model.target }}</td>
+                                <td>
+                                    {% if model.performance_metrics %}
+                                    {% set metrics = model.performance_metrics|tojson|fromjson %}
+                                    {% if metrics.accuracy %}
+                                    <div class="progress" style="height: 20px;" title="Accuracy: {{ (metrics.accuracy * 100)|round(2) }}%">
+                                        <div class="progress-bar bg-success" role="progressbar" 
+                                             style="width: {{ (metrics.accuracy * 100)|round }}%;" 
+                                             aria-valuenow="{{ (metrics.accuracy * 100)|round }}" 
+                                             aria-valuemin="0" aria-valuemax="100">
+                                            {{ (metrics.accuracy * 100)|round }}%
+                                        </div>
+                                    </div>
+                                    {% else %}
+                                    <span class="text-muted">No metrics available</span>
+                                    {% endif %}
+                                    {% else %}
+                                    <span class="text-muted">No metrics available</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ model.created_at.strftime('%Y-%m-%d') }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i> No machine learning models trained yet.
+                    <a href="{{ url_for('analyze') }}" class="alert-link">Train your first model</a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Additional dashboard charts would go here if we had actual data to visualize
+</script>
+{% endblock %}

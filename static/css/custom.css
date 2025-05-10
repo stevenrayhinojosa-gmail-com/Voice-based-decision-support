@@ -1,0 +1,68 @@
+/* Custom CSS to complement Bootstrap styles */
+
+/* Add minimal custom styles as needed */
+.protocol-card {
+    transition: transform 0.2s;
+}
+
+.protocol-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+}
+
+.decision-option {
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.decision-option:hover {
+    background-color: var(--bs-primary-bg-subtle) !important;
+}
+
+/* Help visualize the decision tree */
+.tree-node {
+    border-left: 2px solid var(--bs-primary);
+    padding-left: 15px;
+    margin-left: 15px;
+}
+
+.tree-leaf {
+    border-left: 2px solid var(--bs-success);
+    padding-left: 15px;
+    margin-left: 15px;
+}
+
+/* Custom animation for loading states */
+.loading-pulse {
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+    0% {
+        opacity: 0.6;
+    }
+    50% {
+        opacity: 1;
+    }
+    100% {
+        opacity: 0.6;
+    }
+}
+
+/* Style for highlighting recommendation text */
+.recommendation-text {
+    font-size: 1.2rem;
+    padding: 20px;
+    border-radius: 5px;
+    background-color: var(--bs-primary-bg-subtle);
+    border-left: 5px solid var(--bs-primary);
+}
+
+/* Visual hierarchy for explanations */
+.explanation-item {
+    margin-bottom: 8px;
+    padding: 8px;
+    border-radius: 4px;
+    background-color: var(--bs-body-bg);
+    border-left: 3px solid var(--bs-info);
+}

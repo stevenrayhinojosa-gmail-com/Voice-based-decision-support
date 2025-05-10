@@ -1,0 +1,207 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <h1 class="mb-3">Behavioral Data Entry</h1>
+        <p class="lead">Record behavioral observations and incidents for analysis and decision support</p>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Entry Form Card -->
+    <div class="col-md-8 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-edit me-2"></i> Enter Behavioral Data</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('data_entry') }}">
+                    {{ form.hidden_tag() }}
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="subject_id" class="form-label">{{ form.subject_id.label }}</label>
+                            {{ form.subject_id(class="form-control" + (" is-invalid" if form.subject_id.errors else "")) }}
+                            {% for error in form.subject_id.errors %}
+                            <div class="invalid-feedback">{{ error }}</div>
+                            {% endfor %}
+                            <div class="form-text">Anonymized identifier for the subject</div>
+                        </div>
+                        
+                        <div class="col-md-3 mb-3">
+                            <label for="age" class="form-label">{{ form.age.label }}</label>
+                            {{ form.age(class="form-control" + (" is-invalid" if form.age.errors else "")) }}
+                            {% for error in form.age.errors %}
+                            <div class="invalid-feedback">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        
+                        <div class="col-md-3 mb-3">
+                            <label for="gender" class="form-label">{{ form.gender.label }}</label>
+                            {{ form.gender(class="form-control" + (" is-invalid" if form.gender.errors else "")) }}
+                            {% for error in form.gender.errors %}
+                            <div class="invalid-feedback">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="context" class="form-label">{{ form.context.label }}</label>
+                        {{ form.context(class="form-control" + (" is-invalid" if form.context.errors else "")) }}
+                        {% for error in form.context.errors %}
+                        <div class="invalid-feedback">{{ error }}</div>
+                        {% endfor %}
+                        <div class="form-text">Environment or situation where behavior occurred (e.g., "classroom", "home", "workplace")</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="behavior_description" class="form-label">{{ form.behavior_description.label }}</label>
+                        {{ form.behavior_description(class="form-control" + (" is-invalid" if form.behavior_description.errors else ""), rows=4) }}
+                        {% for error in form.behavior_description.errors %}
+                        <div class="invalid-feedback">{{ error }}</div>
+                        {% endfor %}
+                        <div class="form-text">Detailed description of the observed behavior</div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="intensity" class="form-label">{{ form.intensity.label }}</label>
+                            {{ form.intensity(class="form-control" + (" is-invalid" if form.intensity.errors else "")) }}
+                            {% for error in form.intensity.errors %}
+                            <div class="invalid-feedback">{{ error }}</div>
+                            {% endfor %}
+                            <div class="form-text">Scale from 1 (mild) to 10 (severe)</div>
+                        </div>
+                        
+                        <div class="col-md-4 mb-3">
+                            <label for="frequency" class="form-label">{{ form.frequency.label }}</label>
+                            {{ form.frequency(class="form-control" + (" is-invalid" if form.frequency.errors else "")) }}
+                            {% for error in form.frequency.errors %}
+                            <div class="invalid-feedback">{{ error }}</div>
+                            {% endfor %}
+                            <div class="form-text">Number of occurrences</div>
+                        </div>
+                        
+                        <div class="col-md-4 mb-3">
+                            <label for="duration" class="form-label">{{ form.duration.label }}</label>
+                            {{ form.duration(class="form-control" + (" is-invalid" if form.duration.errors else "")) }}
+                            {% for error in form.duration.errors %}
+                            <div class="invalid-feedback">{{ error }}</div>
+                            {% endfor %}
+                            <div class="form-text">Length in minutes</div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="triggers" class="form-label">{{ form.triggers.label }}</label>
+                        {{ form.triggers(class="form-control" + (" is-invalid" if form.triggers.errors else ""), rows=3) }}
+                        {% for error in form.triggers.errors %}
+                        <div class="invalid-feedback">{{ error }}</div>
+                        {% endfor %}
+                        <div class="form-text">Events or conditions that appeared to trigger the behavior</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="consequences" class="form-label">{{ form.consequences.label }}</label>
+                        {{ form.consequences(class="form-control" + (" is-invalid" if form.consequences.errors else ""), rows=3) }}
+                        {% for error in form.consequences.errors %}
+                        <div class="invalid-feedback">{{ error }}</div>
+                        {% endfor %}
+                        <div class="form-text">What happened immediately following the behavior</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="protocol_used" class="form-label">Protocol Used (if any)</label>
+                        {{ form.protocol_used(class="form-select" + (" is-invalid" if form.protocol_used.errors else "")) }}
+                        {% for error in form.protocol_used.errors %}
+                        <div class="invalid-feedback">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="outcome" class="form-label">{{ form.outcome.label }}</label>
+                        {{ form.outcome(class="form-control" + (" is-invalid" if form.outcome.errors else ""), rows=3) }}
+                        {% for error in form.outcome.errors %}
+                        <div class="invalid-feedback">{{ error }}</div>
+                        {% endfor %}
+                        <div class="form-text">Final result or resolution of the situation</div>
+                    </div>
+                    
+                    <div class="mt-4">
+                        {{ form.submit(class="btn btn-primary") }}
+                        <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary ms-2">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Info Card -->
+    <div class="col-md-4 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i> Data Collection Guide</h5>
+            </div>
+            <div class="card-body">
+                <p>
+                    <strong>Why collect behavioral data?</strong>
+                </p>
+                <ul>
+                    <li>Identify patterns and triggers</li>
+                    <li>Measure effectiveness of interventions</li>
+                    <li>Train machine learning models</li>
+                    <li>Support evidence-based decision making</li>
+                </ul>
+                
+                <p class="mt-3">
+                    <strong>Tips for quality data entry:</strong>
+                </p>
+                <ul>
+                    <li>Be objective and specific in descriptions</li>
+                    <li>Record data as soon as possible after the incident</li>
+                    <li>Focus on observable behavior, not interpretations</li>
+                    <li>Include context and environmental factors</li>
+                    <li>Note any interventions applied and their effects</li>
+                </ul>
+                
+                <div class="alert alert-info mt-3">
+                    <i class="fas fa-lightbulb me-2"></i>
+                    The more consistent and detailed your data entry, the more effective your analysis and decision support will be.
+                </div>
+            </div>
+        </div>
+        
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-chart-line me-2"></i> Data Metrics</h5>
+            </div>
+            <div class="card-body">
+                <p>
+                    <strong>Understanding the severity metrics:</strong>
+                </p>
+                
+                <div class="mb-3">
+                    <label class="form-label">Intensity Scale Guide</label>
+                    <div class="progress mb-2" style="height: 30px;">
+                        <div class="progress-bar bg-success" role="progressbar" style="width: 30%" aria-valuenow="30" aria-valuemin="0" aria-valuemax="100">1-3: Mild</div>
+                        <div class="progress-bar bg-warning" role="progressbar" style="width: 40%" aria-valuenow="40" aria-valuemin="0" aria-valuemax="100">4-7: Moderate</div>
+                        <div class="progress-bar bg-danger" role="progressbar" style="width: 30%" aria-valuenow="30" aria-valuemin="0" aria-valuemax="100">8-10: Severe</div>
+                    </div>
+                    <small class="text-muted">Rate the intensity of the behavior on a scale from 1-10</small>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">Frequency &amp; Duration</label>
+                    <p class="small">
+                        <strong>Frequency:</strong> Count of how many times the behavior occurred within the relevant time period (e.g., per day, per session).
+                    </p>
+                    <p class="small">
+                        <strong>Duration:</strong> Total time the behavior lasted, measured in minutes.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

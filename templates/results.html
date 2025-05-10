@@ -1,0 +1,164 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <h1 class="mb-3">
+            {% if recommendation %}
+            Decision Support Result
+            {% elif prediction %}
+            Prediction Result
+            {% else %}
+            Result
+            {% endif %}
+        </h1>
+        
+        {% if protocol %}
+        <p class="lead">Protocol: <strong>{{ protocol.name }}</strong></p>
+        {% endif %}
+        
+        <div class="progress mb-4">
+            <div class="progress-bar bg-success" role="progressbar" style="width: 100%;" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100">
+                Complete
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8 offset-md-2">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    {% if recommendation %}
+                    <i class="fas fa-check-circle text-success me-2"></i> Recommended Action
+                    {% elif prediction %}
+                    <i class="fas fa-chart-line text-primary me-2"></i> Prediction Result
+                    {% else %}
+                    <i class="fas fa-info-circle me-2"></i> Result
+                    {% endif %}
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if recommendation %}
+                <!-- Decision Support Recommendation -->
+                <div class="recommendation-text p-4 mb-4">
+                    {{ recommendation }}
+                </div>
+                
+                {% elif prediction %}
+                <!-- ML Prediction Result -->
+                <div class="mb-4">
+                    <h4 class="mb-3">Predicted Outcome: <span class="text-primary">{{ prediction }}</span></h4>
+                    
+                    {% if confidence %}
+                    <div class="mb-3">
+                        <h6>Confidence: {{ (confidence * 100)|round(2) }}%</h6>
+                        <div class="progress" style="height: 25px;">
+                            <div class="progress-bar bg-{{ 'success' if confidence > 0.7 else 'warning' if confidence > 0.4 else 'danger' }}" 
+                                 role="progressbar" 
+                                 style="width: {{ (confidence * 100)|round }}%;" 
+                                 aria-valuenow="{{ (confidence * 100)|round }}" 
+                                 aria-valuemin="0" 
+                                 aria-valuemax="100">
+                                {{ (confidence * 100)|round(1) }}%
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    {% if explanation %}
+                    <div class="mt-4">
+                        <h6>Explanation:</h6>
+                        <div class="card bg-light">
+                            <div class="card-body">
+                                <pre style="white-space: pre-wrap; font-family: inherit;">{{ explanation }}</pre>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+                {% else %}
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle me-2"></i> No result data available.
+                </div>
+                {% endif %}
+                
+                <div class="alert alert-info mt-3">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <strong>What to do next:</strong>
+                    <ul class="mb-0 mt-2">
+                        <li>Document the outcome of applying this recommendation/prediction</li>
+                        <li>Enter new behavioral data to improve future models</li>
+                        <li>Evaluate the effectiveness of the recommended approach</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="card-footer">
+                <div class="d-flex justify-content-between">
+                    <a href="{{ url_for('data_entry') }}" class="btn btn-outline-primary">
+                        <i class="fas fa-database me-1"></i> Enter Outcome Data
+                    </a>
+                    
+                    <div>
+                        {% if recommendation %}
+                        <a href="{{ url_for('decision_support') }}" class="btn btn-primary">
+                            <i class="fas fa-sync-alt me-1"></i> New Support Session
+                        </a>
+                        {% elif prediction %}
+                        <a href="{{ url_for('predict') }}" class="btn btn-primary">
+                            <i class="fas fa-sync-alt me-1"></i> New Prediction
+                        </a>
+                        {% else %}
+                        <a href="{{ url_for('index') }}" class="btn btn-primary">
+                            <i class="fas fa-home me-1"></i> Return Home
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Action Suggestions -->
+<div class="row mt-4">
+    <div class="col-md-8 offset-md-2">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-forward me-2"></i> Next Steps</h5>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-md-4 mb-3">
+                        <div class="p-3">
+                            <i class="fas fa-file-alt text-primary" style="font-size: 2rem;"></i>
+                        </div>
+                        <h6>Document</h6>
+                        <p class="small">Record the outcome and effectiveness</p>
+                        <a href="{{ url_for('data_entry') }}" class="btn btn-sm btn-outline-primary">Add Data</a>
+                    </div>
+                    
+                    <div class="col-md-4 mb-3">
+                        <div class="p-3">
+                            <i class="fas fa-chart-pie text-info" style="font-size: 2rem;"></i>
+                        </div>
+                        <h6>Analyze</h6>
+                        <p class="small">Review patterns and effectiveness</p>
+                        <a href="{{ url_for('analyze') }}" class="btn btn-sm btn-outline-info">Analyze Data</a>
+                    </div>
+                    
+                    <div class="col-md-4 mb-3">
+                        <div class="p-3">
+                            <i class="fas fa-sitemap text-success" style="font-size: 2rem;"></i>
+                        </div>
+                        <h6>Improve</h6>
+                        <p class="small">Refine protocols based on outcomes</p>
+                        <a href="{{ url_for('protocols') }}" class="btn btn-sm btn-outline-success">Update Protocols</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

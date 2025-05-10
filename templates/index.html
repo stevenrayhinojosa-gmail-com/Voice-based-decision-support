@@ -1,0 +1,158 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12 text-center mb-5">
+        <h1 class="display-4">Behavioral Decision Support System</h1>
+        <p class="lead">A Python-based model for processing and analyzing behavioral data to support decision-making</p>
+    </div>
+</div>
+
+<div class="row mb-5">
+    <div class="col-md-12">
+        <div class="card bg-dark text-light">
+            <div class="card-body p-5">
+                <div class="row align-items-center">
+                    <div class="col-md-6">
+                        <h2>Advanced Behavioral Analysis</h2>
+                        <p class="lead">
+                            Using machine learning to understand patterns and make informed decisions.
+                        </p>
+                        <p>
+                            Our behavioral decision support system combines structured protocols with machine learning 
+                            to analyze behavioral data and provide evidence-based recommendations.
+                        </p>
+                        <div class="mt-4">
+                            <a href="{{ url_for('decision_support') }}" class="btn btn-primary me-2">
+                                <i class="fas fa-lightbulb me-2"></i> Start Decision Support
+                            </a>
+                            <a href="{{ url_for('dashboard') }}" class="btn btn-outline-light">
+                                <i class="fas fa-chart-line me-2"></i> Go to Dashboard
+                            </a>
+                        </div>
+                    </div>
+                    <div class="col-md-6 text-center">
+                        <div class="p-3">
+                            <i class="fas fa-brain" style="font-size: 150px; opacity: 0.7;"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-5">
+    <div class="col-md-12 text-center mb-4">
+        <h2>System Overview</h2>
+        <p class="lead">Comprehensive tools for behavioral analysis and decision-making</p>
+    </div>
+    
+    <!-- Feature cards -->
+    <div class="col-md-4 mb-4">
+        <div class="card h-100 protocol-card">
+            <div class="card-body text-center">
+                <div class="mb-3">
+                    <i class="fas fa-sitemap text-primary" style="font-size: 3rem;"></i>
+                </div>
+                <h5 class="card-title">Behavioral Protocols</h5>
+                <p class="card-text">
+                    Create and manage decision trees for structured behavioral response protocols.
+                </p>
+                <p class="text-center">
+                    <span class="badge bg-primary">{{ protocol_count }} Protocols</span>
+                </p>
+            </div>
+            <div class="card-footer bg-transparent border-top-0 text-center">
+                <a href="{{ url_for('protocols') }}" class="btn btn-outline-primary">Manage Protocols</a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4 mb-4">
+        <div class="card h-100 protocol-card">
+            <div class="card-body text-center">
+                <div class="mb-3">
+                    <i class="fas fa-database text-success" style="font-size: 3rem;"></i>
+                </div>
+                <h5 class="card-title">Data Collection</h5>
+                <p class="card-text">
+                    Record behavioral observations and outcomes for analysis and model training.
+                </p>
+                <p class="text-center">
+                    <span class="badge bg-success">{{ data_count }} Data Points</span>
+                </p>
+            </div>
+            <div class="card-footer bg-transparent border-top-0 text-center">
+                <a href="{{ url_for('data_entry') }}" class="btn btn-outline-success">Enter Data</a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4 mb-4">
+        <div class="card h-100 protocol-card">
+            <div class="card-body text-center">
+                <div class="mb-3">
+                    <i class="fas fa-chart-pie text-info" style="font-size: 3rem;"></i>
+                </div>
+                <h5 class="card-title">ML Analysis</h5>
+                <p class="card-text">
+                    Build machine learning models to predict outcomes and identify patterns.
+                </p>
+                <p class="text-center">
+                    <span class="badge bg-info">{{ model_count }} Models</span>
+                </p>
+            </div>
+            <div class="card-footer bg-transparent border-top-0 text-center">
+                <a href="{{ url_for('analyze') }}" class="btn btn-outline-info">Analyze Data</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-5">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h4>Getting Started</h4>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-4">
+                            <h5><i class="fas fa-arrow-right text-primary me-2"></i> Step 1: Create a Protocol</h5>
+                            <p>
+                                Define behavioral protocols with decision points and response options.
+                                <a href="{{ url_for('protocols') }}" class="ms-2">Create now</a>
+                            </p>
+                        </div>
+                        <div class="mb-4">
+                            <h5><i class="fas fa-arrow-right text-primary me-2"></i> Step 2: Enter Behavioral Data</h5>
+                            <p>
+                                Record behavioral observations, triggers, and outcomes for analysis.
+                                <a href="{{ url_for('data_entry') }}" class="ms-2">Enter data</a>
+                            </p>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-4">
+                            <h5><i class="fas fa-arrow-right text-primary me-2"></i> Step 3: Train ML Models</h5>
+                            <p>
+                                Build machine learning models to identify patterns and make predictions.
+                                <a href="{{ url_for('analyze') }}" class="ms-2">Train models</a>
+                            </p>
+                        </div>
+                        <div class="mb-4">
+                            <h5><i class="fas fa-arrow-right text-primary me-2"></i> Step 4: Use Decision Support</h5>
+                            <p>
+                                Apply protocols and models to get recommendations for behavior responses.
+                                <a href="{{ url_for('decision_support') }}" class="ms-2">Start now</a>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
