@@ -392,19 +392,32 @@ def natural_language_query():
                           result=result,
                           title="Natural Language Query")
 
-@app.route('/voice_decision_support')
+@app.route('/voice_decision_support', methods=['GET', 'POST'])
 def voice_decision_support():
     """Route for voice-based decision support"""
+    # Create a form for protocol selection
+    form = DecisionSupportForm()
+    
     # Get available protocols
     protocols = Protocol.query.all()
+    form.protocol_id.choices = [(p.id, p.name) for p in protocols]
+    
+    # Process the form submission
+    if form.validate_on_submit():
+        protocol_id = form.protocol_id.data
+        session['current_protocol_id'] = protocol_id
+        return redirect(url_for('voice_input_process'))
     
     # Check if we already have a selected protocol
     selected_protocol = None
     if 'current_protocol_id' in session:
         protocol_id = session['current_protocol_id']
         selected_protocol = Protocol.query.get(protocol_id)
+        # Pre-select this protocol in the form
+        form.protocol_id.data = protocol_id
     
     return render_template('voice_support.html',
+                          form=form,
                           protocols=protocols,
                           selected_protocol=selected_protocol,
                           title="Voice-Based Decision Support")
