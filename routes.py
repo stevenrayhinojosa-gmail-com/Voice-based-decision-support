@@ -632,15 +632,23 @@ def voice_capture():
             # If no protocol selected, add that information to the result
             result["analysis"]["protocol_status"] = "No protocol selected"
             
-        # Return the results
-        return jsonify(result)
+        # Return the results using our custom AlchemyEncoder for SQLAlchemy objects
+        return app.response_class(
+            response=json.dumps(result, cls=AlchemyEncoder),
+            status=200,
+            mimetype='application/json'
+        )
             
     except Exception as e:
         logger.error(f"Error processing voice input: {str(e)}")
-        return jsonify({
-            "success": False,
-            "error": str(e)
-        })
+        return app.response_class(
+            response=json.dumps({
+                "success": False,
+                "error": str(e)
+            }),
+            status=500,
+            mimetype='application/json'
+        )
 
         # For demo purposes, simulate a successful voice recognition
         # Check if the request contains JSON data
