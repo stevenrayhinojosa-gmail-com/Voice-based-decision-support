@@ -1,0 +1,136 @@
+import logging
+import os
+from datetime import datetime
+from flask import render_template, request, redirect, url_for, flash, session, jsonify
+from sqlalchemy import func, and_, or_
+
+from app import app, db
+from forms import *
+from models import *
+from ml_models import BehavioralDecisionModel
+from voice_recognition import analyze_speech_for_decision, extract_keywords_from_speech
+from advanced_nlp import BehaviorQueryProcessor
+from context_sensors import ContextSensor, context_sensor
+
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger('routes')
+
+@app.route('/')
+def index():
+    """Home page route"""
+    return render_template('index.html', title="Behavioral Decision Support")
+
+# Continue with existing routes...
+
+@app.route('/api/context_data', methods=['GET'])
+def get_context_data():
+    """API endpoint for retrieving current context data"""
+    try:
+        # Import the context_sensor singleton from the context_sensors module
+        from context_sensors import context_sensor
+        
+        # Get fresh context data
+        context_data = context_sensor.get_context_data()
+        
+        # Return the data as JSON with success flag
+        return jsonify({
+            'success': True,
+            'time_period': context_data['time_period'],
+            'noise_level_db': context_data['noise_level_db']
+        })
+    except Exception as e:
+        logger.error(f"Error getting context data: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        })
+
+@app.route('/api/voice_capture', methods=['POST'])
+def voice_capture():
+    """API endpoint for capturing voice input with context awareness"""
+    try:
+        # In real-world scenario, we would call the voice recognizer here
+        # result = voice_recognizer.listen_once()
+        
+        # For demo purposes, simulate a successful voice recognition
+        # Check if the request contains JSON data
+        if request.is_json:
+            data = request.get_json()
+            simulated_text = data.get('text', 'The student is becoming agitated and disruptive in class')
+        else:
+            simulated_text = 'The student is becoming agitated and disruptive in class'
+        
+        # Get context data for enhanced analysis
+        from context_sensors import context_sensor
+        context_data = context_sensor.get_context_data()
+        time_period = context_data['time_period']['name']
+        noise_level = context_data['noise_level_db']
+        is_transition = context_data['time_period']['is_transition']
+        
+        # Process keywords and emergency detection
+        from voice_recognition import extract_keywords_from_speech
+        keywords = extract_keywords_from_speech(simulated_text)
+        
+        # Determine if emergency based on keywords and context
+        is_emergency = ('emergency' in simulated_text.lower() or 'urgent' in simulated_text.lower() or 
+                      'immediate' in simulated_text.lower() or 'danger' in simulated_text.lower())
+        
+        # Adjust emergency detection based on context
+        # Higher noise levels or transition periods might lead to misinterpretations
+        if noise_level > -40 and not any(kw in simulated_text.lower() for kw in ['emergency', 'urgent', 'danger']):
+            # In very noisy environments, be more conservative about emergency detection
+            is_emergency = False
+        
+        # If it's a transition period, certain behaviors might be more expected
+        context_note = ""
+        if is_transition:
+            context_note = "Note: This is occurring during a transition period, which may affect behavior patterns."
+        elif noise_level > -50:
+            context_note = "Note: Current noise levels are elevated, which may impact behavior."
+        
+        # Enhanced result with context data
+        result = {
+            "success": True,
+            "text": simulated_text,
+            "context": {
+                "time_period": time_period,
+                "noise_level_db": noise_level,
+                "is_transition_period": is_transition
+            },
+            "analysis": {
+                "keywords": keywords,
+                "is_emergency": is_emergency,
+                "sentiment": "concerned" if "worried" in simulated_text.lower() else "neutral",
+                "context_note": context_note
+            }
+        }
+        
+        # Process with protocol if one is selected
+        protocol_id = session.get('current_protocol_id')
+        if protocol_id:
+            # Analyze the speech for decision support with context data
+            analysis = analyze_speech_for_decision(
+                result["text"], 
+                protocol_id,
+                time_period=time_period,
+                noise_level_db=noise_level,
+                is_transition_period=is_transition
+            )
+            
+            # Add the analysis results to our response
+            result["analysis"]["protocol_id"] = protocol_id
+            result["analysis"]["protocol_analysis"] = analysis
+        else:
+            # If no protocol selected, add that information to the result
+            result["analysis"]["protocol_status"] = "No protocol selected"
+            
+        # Return the results
+        return jsonify(result)
+            
+    except Exception as e:
+        logger.error(f"Error processing voice input: {str(e)}")
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        })

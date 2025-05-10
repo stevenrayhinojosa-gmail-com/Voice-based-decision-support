@@ -1,436 +1,298 @@
-import json
 import logging
-import pandas as pd
-from flask import render_template, request, redirect, url_for, flash, jsonify, session
+import os
+from datetime import datetime
+from flask import render_template, request, redirect, url_for, flash, session, jsonify
+from sqlalchemy import func, and_, or_
+
 from app import app, db
-from models import Protocol, DecisionPoint, DecisionOption, BehavioralData, MLModel, SeverityLevel, BehaviorType, BehaviorProtocol, Recommendation
-from forms import (BehavioralDataForm, ProtocolForm, DecisionPointForm, 
-                  DecisionOptionForm, ModelTrainingForm, DecisionSupportForm,
-                  PredictionForm)
-from utils import load_behavioral_data_to_dataframe, preprocess_behavioral_data, get_protocol_tree, add_sample_protocol
+from forms import *
+from models import *
 from ml_models import BehavioralDecisionModel
-from voice_recognition import voice_recognizer, analyze_speech_for_decision
+from voice_recognition import analyze_speech_for_decision, extract_keywords_from_speech
 from advanced_nlp import BehaviorQueryProcessor
+from context_sensors import ContextSensor, context_sensor
 
-# Setup logging
-logger = logging.getLogger(__name__)
-
-# Initialize the ML model
-behavioral_model = BehavioralDecisionModel()
-
-# Initialize the NLP processor for natural language queries
-nlp_processor = BehaviorQueryProcessor(db)
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger('routes')
 
 @app.route('/')
 def index():
     """Home page route"""
-    # Count protocols and behavioral data entries for the dashboard
-    protocol_count = Protocol.query.count()
-    data_count = BehavioralData.query.count()
-    model_count = MLModel.query.count()
-    
-    # If there are no protocols yet, add a sample one
-    if protocol_count == 0:
-        add_sample_protocol()
-        protocol_count = Protocol.query.count()
-    
-    return render_template('index.html', 
-                           protocol_count=protocol_count, 
-                           data_count=data_count,
-                           model_count=model_count)
+    return render_template('index.html', title="Behavioral Decision Support")
 
 @app.route('/dashboard')
 def dashboard():
     """Dashboard page route"""
-    # Get counts for the dashboard
-    protocol_count = Protocol.query.count()
+    # Count number of behavioral data entries
     data_count = BehavioralData.query.count()
-    model_count = MLModel.query.count()
     
-    # Get latest protocols
-    latest_protocols = Protocol.query.order_by(Protocol.created_at.desc()).limit(5).all()
+    # Count number of protocols
+    protocol_count = Protocol.query.count()
     
-    # Get latest behavioral data entries
-    latest_data = BehavioralData.query.order_by(BehavioralData.created_at.desc()).limit(5).all()
-    
-    # Get latest models
-    latest_models = MLModel.query.order_by(MLModel.created_at.desc()).limit(5).all()
+    # Get recent entries
+    recent_entries = BehavioralData.query.order_by(BehavioralData.created_at.desc()).limit(5).all()
     
     return render_template('dashboard.html',
-                          protocol_count=protocol_count,
                           data_count=data_count,
-                          model_count=model_count,
-                          latest_protocols=latest_protocols,
-                          latest_data=latest_data,
-                          latest_models=latest_models)
+                          protocol_count=protocol_count,
+                          recent_entries=recent_entries,
+                          title="Dashboard")
 
 @app.route('/data_entry', methods=['GET', 'POST'])
 def data_entry():
     """Route for entering behavioral data"""
     form = BehavioralDataForm()
     
-    # Add available protocols to the form
+    # Get list of protocols for the dropdown
     protocols = Protocol.query.all()
-    protocol_choices = [(0, 'None')] + [(p.id, p.name) for p in protocols]
-    form.protocol_used = SelectField('Protocol Used (if any)', choices=protocol_choices, coerce=int, validators=[Optional()])
+    form.protocol_used.choices = [(0, 'None')] + [(p.id, p.name) for p in protocols]
     
     if form.validate_on_submit():
-        try:
-            # Create a new behavioral data entry
-            behavioral_data = BehavioralData(
-                subject_id=form.subject_id.data,
-                age=form.age.data,
-                gender=form.gender.data,
-                context=form.context.data,
-                behavior_description=form.behavior_description.data,
-                intensity=form.intensity.data,
-                frequency=form.frequency.data,
-                duration=form.duration.data,
-                triggers=form.triggers.data,
-                consequences=form.consequences.data,
-                outcome=form.outcome.data
-            )
-            
-            # Set protocol if selected
-            if form.protocol_used.data > 0:
-                behavioral_data.protocol_used = form.protocol_used.data
-            
-            db.session.add(behavioral_data)
-            db.session.commit()
-            
-            flash('Behavioral data added successfully!', 'success')
-            return redirect(url_for('dashboard'))
-            
-        except Exception as e:
-            db.session.rollback()
-            logger.error(f"Error adding behavioral data: {str(e)}")
-            flash(f'Error adding data: {str(e)}', 'danger')
+        # Create new behavioral data entry
+        new_data = BehavioralData(
+            subject_id=form.subject_id.data,
+            age=form.age.data,
+            gender=form.gender.data,
+            context=form.context.data,
+            behavior_description=form.behavior_description.data,
+            intensity=form.intensity.data,
+            frequency=form.frequency.data,
+            duration=form.duration.data,
+            triggers=form.triggers.data,
+            consequences=form.consequences.data,
+            outcome=form.outcome.data,
+            protocol_used=form.protocol_used.data if form.protocol_used.data > 0 else None
+        )
+        
+        db.session.add(new_data)
+        db.session.commit()
+        
+        flash('Behavioral data saved successfully!', 'success')
+        return redirect(url_for('data_entry'))
     
-    return render_template('data_entry.html', form=form, title="Enter Behavioral Data")
+    return render_template('data_entry.html', 
+                          form=form, 
+                          title="Enter Behavioral Data")
 
-@app.route('/protocols', methods=['GET'])
+@app.route('/protocols')
 def protocols():
     """Route for viewing and managing protocols"""
-    protocols = Protocol.query.all()
-    form = ProtocolForm()
-    
+    all_protocols = Protocol.query.all()
     return render_template('protocols.html', 
-                          protocols=protocols, 
-                          form=form,
+                          protocols=all_protocols, 
                           title="Behavioral Protocols")
 
-@app.route('/protocols/add', methods=['POST'])
+@app.route('/protocols/add', methods=['GET', 'POST'])
 def add_protocol():
     """Route for adding a new protocol"""
     form = ProtocolForm()
     
     if form.validate_on_submit():
-        try:
-            # Create a new protocol
-            protocol = Protocol(
-                name=form.name.data,
-                description=form.description.data,
-                category=form.category.data
-            )
-            
-            db.session.add(protocol)
-            db.session.commit()
-            
-            flash(f'Protocol "{form.name.data}" created successfully!', 'success')
-            return redirect(url_for('protocol_detail', protocol_id=protocol.id))
-            
-        except Exception as e:
-            db.session.rollback()
-            logger.error(f"Error adding protocol: {str(e)}")
-            flash(f'Error adding protocol: {str(e)}', 'danger')
+        new_protocol = Protocol(
+            name=form.name.data,
+            description=form.description.data,
+            category=form.category.data
+        )
+        
+        db.session.add(new_protocol)
+        db.session.commit()
+        
+        flash(f'Protocol "{form.name.data}" created successfully!', 'success')
+        return redirect(url_for('protocol_detail', protocol_id=new_protocol.id))
     
-    # If validation fails, return to the protocols page with errors
-    protocols = Protocol.query.all()
-    return render_template('protocols.html', 
-                          protocols=protocols, 
-                          form=form,
-                          title="Behavioral Protocols")
+    return render_template('protocol_form.html', 
+                          form=form, 
+                          title="Create Protocol")
 
-@app.route('/protocols/<int:protocol_id>', methods=['GET'])
+@app.route('/protocols/<int:protocol_id>')
 def protocol_detail(protocol_id):
     """Route for viewing a protocol's details and decision points"""
     protocol = Protocol.query.get_or_404(protocol_id)
     decision_points = DecisionPoint.query.filter_by(protocol_id=protocol_id).order_by(DecisionPoint.order).all()
     
-    # Forms for adding decision points and options
-    dp_form = DecisionPointForm()
-    
-    # If there are decision points, determine the next order number
-    if decision_points:
-        next_order = max([dp.order for dp in decision_points]) + 1
-    else:
-        next_order = 1
-    
-    dp_form.order.data = next_order
-    
     return render_template('protocol_detail.html',
                           protocol=protocol,
                           decision_points=decision_points,
-                          dp_form=dp_form,
                           title=f"Protocol: {protocol.name}")
 
-@app.route('/protocols/<int:protocol_id>/add_decision_point', methods=['POST'])
+@app.route('/protocols/<int:protocol_id>/add_decision', methods=['GET', 'POST'])
 def add_decision_point(protocol_id):
     """Route for adding a decision point to a protocol"""
     protocol = Protocol.query.get_or_404(protocol_id)
     form = DecisionPointForm()
     
-    if form.validate_on_submit():
-        try:
-            # Create a new decision point
-            decision_point = DecisionPoint(
-                protocol_id=protocol_id,
-                question=form.question.data,
-                order=form.order.data
-            )
-            
-            db.session.add(decision_point)
-            db.session.commit()
-            
-            flash('Decision point added successfully!', 'success')
-            
-        except Exception as e:
-            db.session.rollback()
-            logger.error(f"Error adding decision point: {str(e)}")
-            flash(f'Error adding decision point: {str(e)}', 'danger')
+    # Set default order to be after the last decision point
+    last_dp = DecisionPoint.query.filter_by(protocol_id=protocol_id).order_by(DecisionPoint.order.desc()).first()
+    if last_dp:
+        form.order.data = last_dp.order + 1
+    else:
+        form.order.data = 1
     
-    return redirect(url_for('protocol_detail', protocol_id=protocol_id))
+    if form.validate_on_submit():
+        new_dp = DecisionPoint(
+            protocol_id=protocol_id,
+            question=form.question.data,
+            order=form.order.data
+        )
+        
+        db.session.add(new_dp)
+        db.session.commit()
+        
+        flash('Decision point added successfully!', 'success')
+        return redirect(url_for('decision_point_detail', dp_id=new_dp.id))
+    
+    return render_template('decision_point_form.html',
+                          form=form,
+                          protocol=protocol,
+                          title="Add Decision Point")
 
-@app.route('/decision_points/<int:dp_id>', methods=['GET'])
+@app.route('/decision_points/<int:dp_id>')
 def decision_point_detail(dp_id):
     """Route for viewing a decision point's details and options"""
-    decision_point = DecisionPoint.query.get_or_404(dp_id)
-    protocol = Protocol.query.get_or_404(decision_point.protocol_id)
+    dp = DecisionPoint.query.get_or_404(dp_id)
     options = DecisionOption.query.filter_by(decision_point_id=dp_id).all()
     
-    # Form for adding options
-    form = DecisionOptionForm()
-    
-    # Get all other decision points in this protocol for the next_decision_id dropdown
-    other_dps = DecisionPoint.query.filter_by(protocol_id=protocol.id).filter(DecisionPoint.id != dp_id).all()
-    form.next_decision_id.choices = [(0, 'None')] + [(dp.id, f"{dp.order}. {dp.question[:30]}...") for dp in other_dps]
-    
     return render_template('decision_point_detail.html',
-                          decision_point=decision_point,
-                          protocol=protocol,
+                          dp=dp,
                           options=options,
-                          form=form,
-                          title=f"Decision Point: {decision_point.question[:30]}...")
+                          title=f"Decision Point: {dp.id}")
 
-@app.route('/decision_points/<int:dp_id>/add_option', methods=['POST'])
+@app.route('/decision_points/<int:dp_id>/add_option', methods=['GET', 'POST'])
 def add_option(dp_id):
     """Route for adding an option to a decision point"""
-    decision_point = DecisionPoint.query.get_or_404(dp_id)
+    dp = DecisionPoint.query.get_or_404(dp_id)
     form = DecisionOptionForm()
     
-    # Set up the choices for the form validation
-    other_dps = DecisionPoint.query.filter_by(protocol_id=decision_point.protocol_id).filter(DecisionPoint.id != dp_id).all()
-    form.next_decision_id.choices = [(0, 'None')] + [(dp.id, f"{dp.order}. {dp.question[:30]}...") for dp in other_dps]
+    # Get available decision points for next_decision_id (excluding current one)
+    available_dps = DecisionPoint.query.filter(
+        DecisionPoint.protocol_id == dp.protocol_id,
+        DecisionPoint.id != dp_id
+    ).all()
+    
+    form.next_decision_id.choices = [(0, 'None')] + [(d.id, f"Decision Point {d.id}: {d.question[:50]}...") for d in available_dps]
     
     if form.validate_on_submit():
-        try:
-            # Create a new option
-            option = DecisionOption(
-                decision_point_id=dp_id,
-                text=form.text.data,
-                is_terminal=form.is_terminal.data,
-                recommendation=form.recommendation.data if form.is_terminal.data else None
-            )
-            
-            # Set next_decision_id if not terminal and a next decision was selected
-            if not form.is_terminal.data and form.next_decision_id.data > 0:
-                option.next_decision_id = form.next_decision_id.data
-            
-            db.session.add(option)
-            db.session.commit()
-            
-            flash('Option added successfully!', 'success')
-            
-        except Exception as e:
-            db.session.rollback()
-            logger.error(f"Error adding option: {str(e)}")
-            flash(f'Error adding option: {str(e)}', 'danger')
+        new_option = DecisionOption(
+            decision_point_id=dp_id,
+            text=form.text.data,
+            is_terminal=form.is_terminal.data,
+            recommendation=form.recommendation.data if form.is_terminal.data else None,
+            next_decision_id=form.next_decision_id.data if not form.is_terminal.data and form.next_decision_id.data > 0 else None
+        )
+        
+        db.session.add(new_option)
+        db.session.commit()
+        
+        flash('Option added successfully!', 'success')
+        return redirect(url_for('decision_point_detail', dp_id=dp_id))
     
-    return redirect(url_for('decision_point_detail', dp_id=dp_id))
+    return render_template('option_form.html',
+                          form=form,
+                          dp=dp,
+                          title="Add Option")
 
-@app.route('/analyze', methods=['GET', 'POST'])
+@app.route('/analyze')
 def analyze():
     """Route for analyzing behavioral data and training models"""
-    # Load data for display
-    data = load_behavioral_data_to_dataframe()
-    data_empty = data.empty
+    # Count data points for summary
+    data_count = BehavioralData.query.count()
     
-    # Create the training form
-    form = ModelTrainingForm()
-    
-    # If data is available, add the columns as choices for target column
-    if not data_empty:
-        # Exclude certain columns that shouldn't be prediction targets
-        exclude_cols = ['id', 'subject_id', 'created_at']
-        valid_cols = [col for col in data.columns if col not in exclude_cols]
-        form.target_column.choices = [(col, col) for col in valid_cols]
-    
-    # Process the form if submitted
-    if form.validate_on_submit() and not data_empty:
-        try:
-            # Process the data for ML
-            processed_data = preprocess_behavioral_data(data)
-            
-            # Train the model based on the selected type
-            if form.model_type.data == 'decision_tree':
-                success, model_info = behavioral_model.train_decision_tree(
-                    data=processed_data,
-                    target_column=form.target_column.data,
-                    max_depth=form.max_depth.data
-                )
-            elif form.model_type.data == 'random_forest':
-                success, model_info = behavioral_model.train_random_forest(
-                    data=processed_data,
-                    target_column=form.target_column.data,
-                    n_estimators=form.n_estimators.data
-                )
-            
-            if success:
-                flash('Model trained successfully!', 'success')
-                return redirect(url_for('analyze'))
-            else:
-                flash(f'Error training model: {model_info.get("error", "Unknown error")}', 'danger')
-                
-        except Exception as e:
-            logger.error(f"Error in model training: {str(e)}")
-            flash(f'Error: {str(e)}', 'danger')
-    
-    # Get existing models for display
-    models = MLModel.query.all()
-    
-    # Basic data statistics if data is available
-    data_stats = {}
-    if not data_empty:
-        data_stats = {
-            'num_entries': len(data),
-            'num_features': len(data.columns),
-            'sample_columns': ', '.join(data.columns[:5]) + ('...' if len(data.columns) > 5 else '')
-        }
+    # Get list of trained models
+    ml_models = MLModel.query.all()
     
     return render_template('analyze.html',
-                          form=form,
-                          data_empty=data_empty,
-                          data_stats=data_stats,
-                          models=models,
-                          title="Analyze Data & Train Models")
+                          data_count=data_count,
+                          ml_models=ml_models,
+                          title="Analyze Data")
 
-@app.route('/decision_support', methods=['GET', 'POST'])
+@app.route('/decision_support')
 def decision_support():
     """Route for the decision support system"""
     form = DecisionSupportForm()
     
-    # Populate protocol choices
+    # Get available protocols
     protocols = Protocol.query.all()
     form.protocol_id.choices = [(p.id, p.name) for p in protocols]
     
-    if form.validate_on_submit():
-        # Start a new decision support session with the selected protocol
-        session['current_protocol_id'] = form.protocol_id.data
-        session['current_dp_id'] = None  # Will be set to the first decision point
-        
-        # Get the protocol structure
-        protocol_tree = get_protocol_tree(form.protocol_id.data)
-        if not protocol_tree:
-            flash('Error: Protocol structure could not be loaded', 'danger')
-            return redirect(url_for('decision_support'))
-        
-        # Find the first decision point (lowest order)
-        decision_points = DecisionPoint.query.filter_by(protocol_id=form.protocol_id.data).order_by(DecisionPoint.order).all()
-        if not decision_points:
-            flash('Error: Protocol has no decision points', 'danger')
-            return redirect(url_for('decision_support'))
-        
-        # Set the first decision point as current
-        session['current_dp_id'] = decision_points[0].id
-        
-        return redirect(url_for('decision_process'))
-    
     return render_template('decision_support.html',
                           form=form,
-                          title="Behavioral Decision Support")
+                          title="Decision Support")
 
 @app.route('/decision_process', methods=['GET', 'POST'])
 def decision_process():
     """Route for processing through a decision protocol"""
     # Check if a protocol is selected
     if 'current_protocol_id' not in session:
-        flash('Please select a protocol first', 'warning')
-        return redirect(url_for('decision_support'))
+        if request.method == 'POST':
+            protocol_id = request.form.get('protocol_id', type=int)
+            if protocol_id:
+                session['current_protocol_id'] = protocol_id
+            else:
+                flash('Please select a protocol', 'warning')
+                return redirect(url_for('decision_support'))
+        else:
+            flash('Please select a protocol first', 'warning')
+            return redirect(url_for('decision_support'))
     
+    # Get the current protocol
     protocol_id = session['current_protocol_id']
-    current_dp_id = session.get('current_dp_id')
-    
-    # Get protocol info
     protocol = Protocol.query.get_or_404(protocol_id)
     
-    # If no current decision point, get the first one
-    if not current_dp_id:
-        decision_point = DecisionPoint.query.filter_by(protocol_id=protocol_id).order_by(DecisionPoint.order).first()
-        if not decision_point:
-            flash('Error: Protocol has no decision points', 'danger')
+    # If we're just starting, get the first decision point
+    if 'current_dp_id' not in session:
+        first_dp = DecisionPoint.query.filter_by(protocol_id=protocol_id).order_by(DecisionPoint.order).first()
+        if not first_dp:
+            flash('This protocol has no decision points defined', 'danger')
             return redirect(url_for('decision_support'))
-        current_dp_id = decision_point.id
-        session['current_dp_id'] = current_dp_id
-    else:
-        decision_point = DecisionPoint.query.get_or_404(current_dp_id)
+        session['current_dp_id'] = first_dp.id
     
-    # Get options for the current decision point
-    options = DecisionOption.query.filter_by(decision_point_id=current_dp_id).all()
+    # Get the current decision point and its options
+    dp_id = session['current_dp_id']
+    dp = DecisionPoint.query.get_or_404(dp_id)
+    options = DecisionOption.query.filter_by(decision_point_id=dp_id).all()
     
-    # Handle option selection
-    if request.method == 'POST':
-        option_id = request.form.get('option_id')
-        if not option_id:
-            flash('Please select an option', 'warning')
+    # Process option selection
+    if request.method == 'POST' and 'option_id' in request.form:
+        option_id = request.form.get('option_id', type=int)
+        selected_option = DecisionOption.query.get_or_404(option_id)
+        
+        if selected_option.is_terminal:
+            # Set session variable for the recommendation
+            session['recommendation'] = selected_option.recommendation
+            # Clear the current DP ID to restart process next time
+            session.pop('current_dp_id', None)
+            # Redirect to results
+            return redirect(url_for('decision_result'))
         else:
-            option = DecisionOption.query.get_or_404(option_id)
-            
-            # If this is a terminal option, show the result
-            if option.is_terminal:
-                session['recommendation'] = option.recommendation
-                return redirect(url_for('decision_result'))
-            
-            # Otherwise, move to the next decision point
-            if option.next_decision_id:
-                session['current_dp_id'] = option.next_decision_id
+            # Move to the next decision point
+            next_dp_id = selected_option.next_decision_id
+            if next_dp_id:
+                session['current_dp_id'] = next_dp_id
                 return redirect(url_for('decision_process'))
             else:
-                # If no next decision point is specified but it's not terminal, 
-                # that's an error in the protocol design
-                flash('Error: Option leads nowhere and is not terminal', 'danger')
+                flash('No next decision point defined for this option', 'danger')
     
     return render_template('decision_process.html',
                           protocol=protocol,
-                          decision_point=decision_point,
+                          dp=dp,
                           options=options,
-                          title=f"Decision Support: {protocol.name}")
+                          title="Decision Support Process")
 
 @app.route('/decision_result')
 def decision_result():
     """Route for showing the decision support result"""
-    # Check if a recommendation exists in the session
     if 'recommendation' not in session:
-        flash('No recommendation available', 'warning')
+        flash('No recommendation available. Please complete the decision process.', 'warning')
         return redirect(url_for('decision_support'))
     
     recommendation = session['recommendation']
-    protocol_id = session.get('current_protocol_id')
-    protocol = Protocol.query.get_or_404(protocol_id) if protocol_id else None
     
-    # Clear the session data
-    session.pop('current_protocol_id', None)
-    session.pop('current_dp_id', None)
-    session.pop('recommendation', None)
+    # Get the protocol info if available
+    protocol = None
+    if 'current_protocol_id' in session:
+        protocol_id = session['current_protocol_id']
+        protocol = Protocol.query.get(protocol_id)
     
     return render_template('results.html',
                           recommendation=recommendation,
@@ -440,603 +302,111 @@ def decision_result():
 @app.route('/predict', methods=['GET', 'POST'])
 def predict():
     """Route for making predictions with trained models"""
+    # Create a generic form for model selection
     form = PredictionForm()
     
-    # Populate model choices
+    # Get available models
     models = MLModel.query.all()
-    form.model_id.choices = [(m.id, m.name) for m in models]
-    
-    if form.validate_on_submit():
-        try:
-            # Load the selected model
-            model_id = form.model_id.data
-            success = behavioral_model.load_model(model_id)
-            
-            if not success:
-                flash('Error loading model', 'danger')
-                return redirect(url_for('predict'))
-            
-            # Collect the input data from the form
-            input_data = {}
-            for field_name, field_value in request.form.items():
-                # Skip the CSRF token and submit field
-                if field_name not in ['csrf_token', 'submit', 'model_id']:
-                    try:
-                        # Try to convert to float for numeric fields
-                        input_data[field_name] = float(field_value)
-                    except ValueError:
-                        # Keep as string if not numeric
-                        input_data[field_name] = field_value
-            
-            # Make prediction
-            prediction, confidence, explanation = behavioral_model.predict(input_data)
-            
-            if prediction is not None:
-                # Store result in session
-                session['prediction_result'] = {
-                    'prediction': str(prediction),
-                    'confidence': float(confidence),
-                    'explanation': explanation
-                }
-                return redirect(url_for('prediction_result'))
-            else:
-                flash(f'Error making prediction: {explanation}', 'danger')
-                
-        except Exception as e:
-            logger.error(f"Error in prediction: {str(e)}")
-            flash(f'Error: {str(e)}', 'danger')
+    form.model_id.choices = [(m.id, f"{m.name} - {m.model_type} - {m.target}") for m in models]
     
     return render_template('predict.html',
                           form=form,
-                          title="Make Predictions")
+                          models=models,
+                          title="Prediction")
 
-@app.route('/prediction_result')
-def prediction_result():
-    """Route for showing prediction results"""
-    # Check if a prediction result exists in the session
-    if 'prediction_result' not in session:
-        flash('No prediction available', 'warning')
-        return redirect(url_for('predict'))
-    
-    result = session['prediction_result']
-    
-    # Clear the session data
-    session.pop('prediction_result', None)
-    
-    return render_template('results.html',
-                          prediction=result['prediction'],
-                          confidence=result['confidence'],
-                          explanation=result['explanation'],
-                          title="Prediction Result")
-
-@app.route('/api/model/<int:model_id>/fields')
-def get_model_fields(model_id):
-    """API endpoint to get the required fields for a model"""
-    try:
-        model_record = MLModel.query.get_or_404(model_id)
-        features = json.loads(model_record.features)
-        
-        return jsonify({
-            'success': True,
-            'fields': features
-        })
-    except Exception as e:
-        logger.error(f"Error getting model fields: {str(e)}")
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        })
-
-# Teacher Input Routes
-
-@app.route('/teacher-input', methods=['GET'])
+@app.route('/teacher_input')
 def teacher_input():
     """Route for teacher input page with both text and voice options"""
     return render_template('teacher_input.html',
-                          title="Behavioral Support for Teachers")
+                          title="Teacher Input")
 
-@app.route('/process-teacher-input', methods=['POST'])
+@app.route('/process_teacher_input', methods=['POST'])
 def process_teacher_input():
     """Process teacher input from either text or voice form"""
-    try:
+    if request.method == 'POST':
         input_type = request.form.get('input_type')
-        severity = request.form.get('severity')
         
         if input_type == 'text':
-            # Process text input
-            student_description = request.form.get('student_description', '')
-            behavior_description = request.form.get('behavior_description', '')
+            text_input = request.form.get('text_input')
+            if not text_input:
+                flash('Please enter some text describing the behavior', 'warning')
+                return redirect(url_for('teacher_input'))
             
-            if not behavior_description:
-                return jsonify({
-                    "success": False,
-                    "error": "Behavior description is required"
-                })
-                
-            # Use the behavior description for analysis
-            text_for_analysis = behavior_description
+            # Process the text input with our NLP processor
+            query_processor = BehaviorQueryProcessor()
+            result = query_processor.get_response_for_query(text_input)
+            
+            # Store the result in session
+            session['teacher_result'] = result
             
         elif input_type == 'voice':
-            # Process voice input
-            voice_transcript = request.form.get('voice_transcript', '')
+            # In a real implementation, we'd process voice input here
+            # For demo purposes, use the simulated text
+            simulated_voice_text = request.form.get('simulated_voice_text')
+            if not simulated_voice_text:
+                flash('Please enter simulated voice text', 'warning')
+                return redirect(url_for('teacher_input'))
             
-            if not voice_transcript:
-                return jsonify({
-                    "success": False,
-                    "error": "Voice transcript is empty. Please try recording again."
-                })
-                
-            # Use the voice transcript for analysis
-            text_for_analysis = voice_transcript
+            # Process the simulated voice text with our NLP processor
+            query_processor = BehaviorQueryProcessor()
+            result = query_processor.get_response_for_query(simulated_voice_text)
             
-        else:
-            return jsonify({
-                "success": False,
-                "error": "Invalid input type"
-            })
-            
-        # Get protocol - use the first one for simplicity
-        protocol = Protocol.query.first()
-        if not protocol:
-            return jsonify({
-                "success": False,
-                "error": "No protocols found in the system"
-            })
-            
-        # Extract keywords and analyze the text
-        keywords = extract_keywords_from_speech(text_for_analysis)
+            # Store the result in session
+            session['teacher_result'] = result
         
-        # Adjust analysis based on severity
-        is_emergency = False
-        if severity == 'high':
-            is_emergency = True
-            
-        # Get recommendation based on the text and severity
-        # Use our existing analysis function
-        analysis_result = analyze_speech_for_decision(text_for_analysis, protocol.id)
-        
-        if analysis_result['success']:
-            recommendation = analysis_result['recommendation'] or "Follow standard classroom management protocols."
-            
-            return jsonify({
-                "success": True,
-                "recommendation_title": "Recommended Action",
-                "recommendation": recommendation,
-                "decision_point": analysis_result['decision_point'].question if 'decision_point' in analysis_result else None,
-                "is_emergency": analysis_result.get('is_emergency', is_emergency),
-                "keywords": keywords
-            })
-        else:
-            # Provide a general recommendation based on severity if analysis fails
-            general_recommendations = {
-                'low': "Monitor the situation. Use calm redirection and positive reinforcement strategies. Document the behavior if it persists.",
-                'medium': "Implement targeted behavior management strategies. Consider contacting parents/guardians if behavior continues. Document the incident.",
-                'high': "Immediate intervention required. Ensure student and classroom safety first. Get additional support if needed. Document the incident thoroughly."
-            }
-            
-            return jsonify({
-                "success": True,
-                "recommendation_title": "General Recommendation",
-                "recommendation": general_recommendations.get(severity, general_recommendations['medium']),
-                "is_emergency": severity == 'high',
-                "keywords": keywords
-            })
-            
-    except Exception as e:
-        logger.error(f"Error processing teacher input: {str(e)}")
-        return jsonify({
-            "success": False,
-            "error": f"An error occurred: {str(e)}"
-        })
+        return redirect(url_for('teacher_result'))
+    
+    return redirect(url_for('teacher_input'))
 
-# Teacher rapid input interface
-@app.route('/rapid_input', methods=['GET', 'POST'])
-def rapid_input():
-    """Route for teachers to quickly input behavioral data and get recommendations"""
-    from models import BehaviorType, SeverityLevel
+@app.route('/teacher_result')
+def teacher_result():
+    """Route for showing teacher input results"""
+    if 'teacher_result' not in session:
+        flash('No results available. Please submit input first.', 'warning')
+        return redirect(url_for('teacher_input'))
     
-    # Get all protocols for selection
-    protocols = Protocol.query.all()
-    
-    # Get all behavior types
-    behavior_types = BehaviorType.query.order_by(BehaviorType.name).all()
-    
-    # Severity level choices
-    severity_levels = [
-        (SeverityLevel.LOW.value, "Low - Minor disruption"),
-        (SeverityLevel.MEDIUM.value, "Medium - Notable disruption"),
-        (SeverityLevel.HIGH.value, "High - Significant disruption"),
-        (SeverityLevel.SEVERE.value, "Severe - Safety concern"),
-        (SeverityLevel.CRITICAL.value, "Critical - Emergency")
-    ]
-    
-    if request.method == 'POST':
-        behavior_type_id = request.form.get('behavior_type_id')
-        protocol_id = request.form.get('protocol_id')
-        behavior_text = request.form.get('behavior_text')
-        severity = request.form.get('severity')
-        
-        logger.info(f"Teacher input - Behavior Type: {behavior_type_id}, Protocol: {protocol_id}, " 
-                   f"Behavior: {behavior_text}, Severity: {severity}")
-        
-        if not behavior_text:
-            flash('Please provide a behavior description', 'warning')
-            return render_template('teacher_input.html', 
-                                  protocols=protocols,
-                                  behavior_types=behavior_types,
-                                  severity_levels=severity_levels,
-                                  title="Rapid Input")
-        
-        # If behavior type is provided but protocol isn't, try to find an appropriate protocol
-        if behavior_type_id and not protocol_id:
-            from models import BehaviorProtocol
-            # Look for a protocol that matches the behavior type and severity
-            behavior_protocol = BehaviorProtocol.query.filter_by(
-                behavior_type_id=behavior_type_id, 
-                severity_level=severity,
-                is_primary=True
-            ).first()
-            
-            if behavior_protocol:
-                protocol_id = behavior_protocol.protocol_id
-                logger.info(f"Selected protocol {protocol_id} based on behavior type and severity")
-        
-        # If we have a protocol, use it with our decision model
-        if protocol_id:
-            # Process the input through our decision model
-            analysis_result = analyze_speech_for_decision(behavior_text, int(protocol_id))
-            
-            if analysis_result['success']:
-                # Store the recommendation in session
-                recommendation = None
-                next_step = None
-                
-                if analysis_result['is_terminal']:
-                    recommendation = analysis_result['recommendation']
-                    # Save the recommendation for display
-                    session['recommendation'] = recommendation
-                else:
-                    # If not terminal, get the next decision point details
-                    next_dp_id = analysis_result['next_decision_id']
-                    next_dp = DecisionPoint.query.get(next_dp_id)
-                    if next_dp:
-                        next_step = next_dp.question
-                        session['current_dp_id'] = next_dp_id
-                
-                # Store input for display on result page
-                session['behavior_text'] = behavior_text
-                session['severity'] = severity
-                session['keywords'] = analysis_result.get('keywords', [])
-                session['is_emergency'] = analysis_result.get('is_emergency', False)
-                session['current_protocol_id'] = int(protocol_id)
-                
-                # If behavior type was selected, store it
-                if behavior_type_id:
-                    behavior_type = BehaviorType.query.get(behavior_type_id)
-                    if behavior_type:
-                        session['behavior_type'] = behavior_type.name
-                        session['behavior_category'] = behavior_type.category
-                
-                # If there's a recommendation, go to results
-                if recommendation:
-                    return redirect(url_for('rapid_result'))
-                # If there's a next step, continue the decision tree
-                elif next_step:
-                    return redirect(url_for('decision_process'))
-                else:
-                    flash('Unable to determine next step in protocol', 'danger')
-            else:
-                # If analysis failed, show the error
-                flash(f"Analysis error: {analysis_result.get('error', 'Unknown error')}", 'danger')
-        else:
-            # If no protocol is available, look for generic recommendations
-            from models import Recommendation
-            behavior_type = None
-            
-            if behavior_type_id:
-                behavior_type = BehaviorType.query.get(behavior_type_id)
-                
-                # Look for a recommendation specific to this behavior type and severity
-                recommendation = Recommendation.query.filter_by(
-                    behavior_type_id=behavior_type_id,
-                    severity_level=severity
-                ).first()
-                
-                if recommendation:
-                    # Save the recommendation for display
-                    session['recommendation'] = recommendation.content
-                    session['recommendation_title'] = recommendation.title
-                    session['behavior_text'] = behavior_text
-                    session['severity'] = severity
-                    session['behavior_type'] = behavior_type.name
-                    session['behavior_category'] = behavior_type.category
-                    
-                    return redirect(url_for('rapid_result'))
-                else:
-                    # No specific recommendation found
-                    flash(f"No specific recommendation found for {behavior_type.name} at {severity} severity.", 'warning')
-                    flash("Please select a protocol to continue or try a different behavior type.", 'info')
-            else:
-                flash("Please select a behavior type or protocol to continue.", 'warning')
-    
-    return render_template('teacher_input.html', 
-                          protocols=protocols,
-                          behavior_types=behavior_types,
-                          severity_levels=severity_levels,
-                          title="Rapid Input")
-
-@app.route('/rapid_result')
-def rapid_result():
-    """Route for showing rapid recommendation results"""
-    # Check if a recommendation exists in the session
-    if 'recommendation' not in session:
-        flash('No recommendation available', 'warning')
-        return redirect(url_for('rapid_input'))
-    
-    # Get all stored session data
-    recommendation = session.get('recommendation')
-    recommendation_title = session.get('recommendation_title')
-    behavior_text = session.get('behavior_text')
-    severity = session.get('severity')
-    keywords = session.get('keywords', [])
-    is_emergency = session.get('is_emergency', False)
-    protocol_id = session.get('current_protocol_id')
-    behavior_type = session.get('behavior_type')
-    behavior_category = session.get('behavior_category')
-    
-    protocol = Protocol.query.get_or_404(protocol_id) if protocol_id else None
-    
-    # Clear the session data
-    session.pop('recommendation', None)
-    session.pop('recommendation_title', None)
-    session.pop('behavior_text', None)
-    session.pop('severity', None)
-    session.pop('keywords', None)
-    session.pop('is_emergency', None)
-    session.pop('current_protocol_id', None)
-    session.pop('current_dp_id', None)
-    session.pop('behavior_type', None)
-    session.pop('behavior_category', None)
+    result = session['teacher_result']
     
     return render_template('teacher_result.html',
-                          recommendation=recommendation,
-                          recommendation_title=recommendation_title,
-                          behavior_text=behavior_text,
-                          severity=severity,
-                          keywords=keywords,
-                          is_emergency=is_emergency,
-                          protocol=protocol,
-                          behavior_type=behavior_type,
-                          behavior_category=behavior_category,
-                          title="Recommendation")
+                          result=result,
+                          title="Teacher Input Results")
 
-@app.route('/api/voice_input', methods=['POST'])
-def voice_input():
-    """API endpoint for processing voice input from teachers"""
-    try:
-        # Check if the request contains JSON data
-        data = request.get_json() if request.is_json else {}
-        speech_text = data.get('speech_text', '')
-        protocol_id = data.get('protocol_id')
-        behavior_type_id = data.get('behavior_type_id')
-        severity = data.get('severity')
-        
-        # If behavior type is provided but protocol isn't, try to find an appropriate protocol
-        if behavior_type_id and not protocol_id:
-            from models import BehaviorProtocol
-            # Look for a protocol that matches the behavior type and severity
-            behavior_protocol = BehaviorProtocol.query.filter_by(
-                behavior_type_id=int(behavior_type_id), 
-                severity_level=severity,
-                is_primary=True
-            ).first()
-            
-            if behavior_protocol:
-                protocol_id = behavior_protocol.protocol_id
-                logger.info(f"Selected protocol {protocol_id} based on behavior type and severity")
-        
-        if not speech_text:
-            return jsonify({
-                "success": False,
-                "error": "Missing speech text"
-            })
-        
-        response_data = {
-            "success": False,
-            "speech_text": speech_text
-        }
-        
-        # If we have a protocol, use our decision model
-        if protocol_id:
-            # Process through our decision model
-            analysis_result = analyze_speech_for_decision(speech_text, int(protocol_id))
-            
-            # Add behavior type info if available
-            if behavior_type_id:
-                from models import BehaviorType
-                behavior_type = BehaviorType.query.get(int(behavior_type_id))
-                if behavior_type:
-                    analysis_result['behavior_type'] = {
-                        'id': behavior_type.id,
-                        'name': behavior_type.name,
-                        'category': behavior_type.category
-                    }
-            
-            return jsonify(analysis_result)
-        
-        # If no protocol, but we have behavior type, look for recommendations
-        elif behavior_type_id:
-            from models import BehaviorType, Recommendation
-            
-            behavior_type = BehaviorType.query.get(int(behavior_type_id))
-            
-            # Look for a recommendation specific to this behavior type and severity
-            recommendation = Recommendation.query.filter_by(
-                behavior_type_id=int(behavior_type_id),
-                severity_level=severity
-            ).first()
-            
-            if recommendation:
-                response_data.update({
-                    "success": True,
-                    "is_recommendation": True,
-                    "recommendation": recommendation.content,
-                    "recommendation_title": recommendation.title,
-                    "behavior_type": {
-                        'id': behavior_type.id,
-                        'name': behavior_type.name,
-                        'category': behavior_type.category
-                    }
-                })
-                return jsonify(response_data)
-            else:
-                response_data.update({
-                    "error": f"No specific recommendation found for this behavior type at {severity} severity"
-                })
-                return jsonify(response_data)
-        else:
-            return jsonify({
-                "success": False,
-                "error": "Missing protocol ID or behavior type"
-            })
-        
-    except Exception as e:
-        logger.error(f"Error processing voice input: {str(e)}")
-        return jsonify({
-            "success": False,
-            "error": str(e)
-        })
-
-@app.route('/api/save_recommendation', methods=['POST'])
-def save_recommendation():
-    """API endpoint for saving recommendation data to the session"""
-    try:
-        data = request.get_json() if request.is_json else {}
-        
-        # Save relevant data to session
-        if 'behavior_text' in data:
-            session['behavior_text'] = data['behavior_text']
-        
-        if 'behavior_type_id' in data and data['behavior_type_id']:
-            behavior_type_id = int(data['behavior_type_id'])
-            behavior_type = BehaviorType.query.get(behavior_type_id)
-            if behavior_type:
-                session['behavior_type'] = behavior_type.name
-                session['behavior_category'] = behavior_type.category
-        
-        if 'severity' in data:
-            session['severity'] = data['severity']
-            
-        if 'keywords' in data:
-            session['keywords'] = data['keywords']
-            
-        if 'protocol_id' in data and data['protocol_id']:
-            session['current_protocol_id'] = int(data['protocol_id'])
-            
-        if 'is_terminal' in data:
-            session['is_terminal'] = data['is_terminal']
-            
-        if 'recommendation' in data:
-            session['recommendation'] = data['recommendation']
-            
-        if 'recommendation_title' in data:
-            session['recommendation_title'] = data['recommendation_title']
-            
-        if 'next_decision_id' in data and data['next_decision_id']:
-            session['current_dp_id'] = int(data['next_decision_id'])
-            
-        return jsonify({"success": True})
-        
-    except Exception as e:
-        logger.error(f"Error saving recommendation to session: {str(e)}")
-        return jsonify({
-            "success": False,
-            "error": str(e)
-        })
-
-# Natural language query route
 @app.route('/natural_language_query', methods=['GET', 'POST'])
 def natural_language_query():
     """
     Handle natural language queries from teachers using advanced NLP
     """
-    # Initialize context data
+    query_text = ""
     result = None
-    query = None
     
     if request.method == 'POST':
-        # Get query from form
-        query = request.form.get('query')
-        if not query:
-            flash('Please enter a question or describe a behavioral situation', 'warning')
-            return render_template('natural_language_query.html')
+        query_text = request.form.get('query', '')
         
-        # Process the query with our NLP processor
-        result = nlp_processor.get_response_for_query(query)
-        
-        if result['success']:
-            # If we have recommendations, save them to session
-            if result['recommendation']:
-                session['recommendation'] = result['recommendation']['content']
-                session['recommendation_title'] = result['recommendation']['title']
+        if query_text:
+            # Process the query using our NLP processor
+            query_processor = BehaviorQueryProcessor()
+            result = query_processor.get_response_for_query(query_text)
             
-            # Get behavior type details
-            behavior_type = result['analysis']['behavior_type']
-            if behavior_type:
-                # Convert snake_case to display format
-                behavior_type_display = behavior_type.replace('_', ' ').title()
-                session['behavior_type'] = behavior_type_display
-                
-                # Try to get category from database
-                try:
-                    bt_name = behavior_type.replace('_', ' ')
-                    bt = BehaviorType.query.filter(BehaviorType.name.ilike(f"%{bt_name}%")).first()
-                    if bt:
-                        session['behavior_category'] = bt.category
-                except Exception as e:
-                    logger.error(f"Error finding behavior type: {str(e)}")
-            
-            # Save severity
-            severity = result['analysis']['severity']
-            session['severity'] = severity
-            
-            # Save emergency status
-            session['is_emergency'] = result['analysis']['is_emergency']
-            
-            # Save protocol info if available
-            if result['protocol_id']:
-                session['current_protocol_id'] = result['protocol_id']
-            
-            # Save the original query
-            session['behavior_text'] = query
-            
-            # Redirect to results page
-            return redirect(url_for('rapid_result'))
-        else:
-            # If no recommendations found
-            flash('No specific recommendations found for your query. Please try again with more details or select a different approach.', 'warning')
-    
     return render_template('natural_language_query.html',
-                          title="Ask a Question")
+                          query_text=query_text,
+                          result=result,
+                          title="Natural Language Query")
 
-# Voice recognition routes
-
-@app.route('/voice_decision_support', methods=['GET', 'POST'])
+@app.route('/voice_decision_support')
 def voice_decision_support():
     """Route for voice-based decision support"""
-    form = DecisionSupportForm()
-    
-    # Populate protocol choices
+    # Get available protocols
     protocols = Protocol.query.all()
-    form.protocol_id.choices = [(p.id, p.name) for p in protocols]
     
-    if form.validate_on_submit():
-        # Store the selected protocol ID in session
-        session['current_protocol_id'] = form.protocol_id.data
-        return redirect(url_for('voice_input_process'))
+    # Check if we already have a selected protocol
+    selected_protocol = None
+    if 'current_protocol_id' in session:
+        protocol_id = session['current_protocol_id']
+        selected_protocol = Protocol.query.get(protocol_id)
     
     return render_template('voice_support.html',
-                          form=form,
+                          protocols=protocols,
+                          selected_protocol=selected_protocol,
                           title="Voice-Based Decision Support")
 
 @app.route('/voice_input_process', methods=['GET', 'POST'])
@@ -1121,11 +491,8 @@ def voice_input_process():
                 else:
                     # If analysis failed, show the error
                     flash(f"Could not process voice input: {analysis_result.get('error', 'Unknown error')}", 'danger')
-                    
-                    # If keywords were extracted but no mapping found, show them
-                    if 'keywords' in analysis_result and analysis_result['keywords']:
-                        flash(f"Detected keywords: {', '.join(analysis_result['keywords'])}", 'info')
     
+    # If we get here, either it's a GET request or the POST processing didn't result in a redirect
     return render_template('voice_input.html',
                           protocol=protocol,
                           title="Voice Input Processing")
@@ -1155,7 +522,7 @@ def get_context_data():
 
 @app.route('/api/voice_capture', methods=['POST'])
 def voice_capture():
-    """API endpoint for capturing voice input"""
+    """API endpoint for capturing voice input with context awareness"""
     try:
         # In real-world scenario, we would call the voice recognizer here
         # result = voice_recognizer.listen_once()
@@ -1163,7 +530,8 @@ def voice_capture():
         # For demo purposes, simulate a successful voice recognition
         # Check if the request contains JSON data
         if request.is_json:
-            simulated_text = request.json.get('text', 'The student is becoming agitated and disruptive in class')
+            data = request.get_json()
+            simulated_text = data.get('text', 'The student is becoming agitated and disruptive in class')
         else:
             simulated_text = 'The student is becoming agitated and disruptive in class'
         
@@ -1174,6 +542,27 @@ def voice_capture():
         noise_level = context_data['noise_level_db']
         is_transition = context_data['time_period']['is_transition']
         
+        # Process keywords and emergency detection
+        from voice_recognition import extract_keywords_from_speech
+        keywords = extract_keywords_from_speech(simulated_text)
+        
+        # Determine if emergency based on keywords and context
+        is_emergency = ('emergency' in simulated_text.lower() or 'urgent' in simulated_text.lower() or 
+                      'immediate' in simulated_text.lower() or 'danger' in simulated_text.lower())
+        
+        # Adjust emergency detection based on context
+        # Higher noise levels or transition periods might lead to misinterpretations
+        if noise_level > -40 and not any(kw in simulated_text.lower() for kw in ['emergency', 'urgent', 'danger']):
+            # In very noisy environments, be more conservative about emergency detection
+            is_emergency = False
+        
+        # If it's a transition period, certain behaviors might be more expected
+        context_note = ""
+        if is_transition:
+            context_note = "Note: This is occurring during a transition period, which may affect behavior patterns."
+        elif noise_level > -50:
+            context_note = "Note: Current noise levels are elevated, which may impact behavior."
+        
         # Enhanced result with context data
         result = {
             "success": True,
@@ -1182,64 +571,122 @@ def voice_capture():
                 "time_period": time_period,
                 "noise_level_db": noise_level,
                 "is_transition_period": is_transition
+            },
+            "analysis": {
+                "keywords": keywords,
+                "is_emergency": is_emergency,
+                "sentiment": "concerned" if "worried" in simulated_text.lower() else "neutral",
+                "context_note": context_note
             }
         }
         
-        if result["success"]:
-            protocol_id = session.get('current_protocol_id')
-            if protocol_id:
-                # Analyze the speech for decision support
-                analysis = analyze_speech_for_decision(result["text"], protocol_id)
-                return jsonify({
-                    "success": True,
-                    "text": result["text"],
-                    "analysis": analysis
-                })
-            else:
-                return jsonify({
-                    "success": True,
-                    "text": result["text"],
-                    "analysis": {
-                        "success": False,
-                        "error": "No protocol selected"
-                    }
-                })
+        # Process with protocol if one is selected
+        protocol_id = session.get('current_protocol_id')
+        if protocol_id:
+            # Analyze the speech for decision support with context data
+            analysis = analyze_speech_for_decision(
+                result["text"], 
+                protocol_id,
+                time_period=time_period,
+                noise_level_db=noise_level,
+                is_transition_period=is_transition
+            )
+            
+            # Add the analysis results to our response
+            result["analysis"]["protocol_id"] = protocol_id
+            result["analysis"]["protocol_analysis"] = analysis
         else:
-            return jsonify(result)
-    
+            # If no protocol selected, add that information to the result
+            result["analysis"]["protocol_status"] = "No protocol selected"
+            
+        # Return the results
+        return jsonify(result)
+            
     except Exception as e:
-        logger.error(f"Error in voice capture: {str(e)}")
-        return jsonify({"success": False, "error": str(e)})
+        logger.error(f"Error processing voice input: {str(e)}")
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        })
 
-
-# Admin routes and utilities
-
-@app.route('/admin/init_behavior_db')
-def init_behavior_db():
-    """Initialize the behavior database with sample data"""
-    from utils import (
-        add_sample_protocol,
-        add_sample_behavior_types,
-        add_sample_recommendations,
-        link_behaviors_to_protocols
-    )
-    
-    results = []
-    
-    # First add a protocol if none exists
-    protocol_result = add_sample_protocol()
-    results.append(f"Protocols: {protocol_result}")
-    
-    # Then add behavior types
-    behavior_types_result = add_sample_behavior_types()
-    results.append(f"Behavior Types: {behavior_types_result}")
-    
-    # Then link behaviors to protocols
-    links_result = link_behaviors_to_protocols()
-    results.append(f"Behavior-Protocol Links: {links_result}")
-    
-    # Finally add recommendations
-    recommendations_result = add_sample_recommendations()
-    results.append(f"Recommendations: {recommendations_result}")
-    
-    return jsonify({"success": True, "results": results})
+        # For demo purposes, simulate a successful voice recognition
+        # Check if the request contains JSON data
+        if request.is_json:
+            data = request.get_json()
+            simulated_text = data.get('text', 'The student is becoming agitated and disruptive in class')
+        else:
+            simulated_text = 'The student is becoming agitated and disruptive in class'
+        
+        # Get context data for enhanced analysis
+        from context_sensors import context_sensor
+        context_data = context_sensor.get_context_data()
+        time_period = context_data['time_period']['name']
+        noise_level = context_data['noise_level_db']
+        is_transition = context_data['time_period']['is_transition']
+        
+        # Process keywords and emergency detection
+        from voice_recognition import extract_keywords_from_speech
+        keywords = extract_keywords_from_speech(simulated_text)
+        
+        # Determine if emergency based on keywords and context
+        is_emergency = ('emergency' in simulated_text.lower() or 'urgent' in simulated_text.lower() or 
+                      'immediate' in simulated_text.lower() or 'danger' in simulated_text.lower())
+        
+        # Adjust emergency detection based on context
+        # Higher noise levels or transition periods might lead to misinterpretations
+        if noise_level > -40 and not any(kw in simulated_text.lower() for kw in ['emergency', 'urgent', 'danger']):
+            # In very noisy environments, be more conservative about emergency detection
+            is_emergency = False
+        
+        # If it's a transition period, certain behaviors might be more expected
+        context_note = ""
+        if is_transition:
+            context_note = "Note: This is occurring during a transition period, which may affect behavior patterns."
+        elif noise_level > -50:
+            context_note = "Note: Current noise levels are elevated, which may impact behavior."
+        
+        # Enhanced result with context data
+        result = {
+            "success": True,
+            "text": simulated_text,
+            "context": {
+                "time_period": time_period,
+                "noise_level_db": noise_level,
+                "is_transition_period": is_transition
+            },
+            "analysis": {
+                "keywords": keywords,
+                "is_emergency": is_emergency,
+                "sentiment": "concerned" if "worried" in simulated_text.lower() else "neutral",
+                "context_note": context_note
+            }
+        }
+        
+        # Process with protocol if one is selected
+        protocol_id = session.get('current_protocol_id')
+        if protocol_id:
+            # Analyze the speech for decision support with context data
+            analysis = analyze_speech_for_decision(
+                result["text"], 
+                protocol_id,
+                time_period=time_period,
+                noise_level_db=noise_level,
+                is_transition_period=is_transition
+            )
+            
+            # Add the analysis results to our response
+            result["analysis"]["protocol_id"] = protocol_id
+            result["analysis"]["protocol_analysis"] = analysis
+        else:
+            # If no protocol selected, add that information to the result
+            result["analysis"]["protocol_status"] = "No protocol selected"
+            
+        # Return the results
+        return jsonify(result)
+            
+    except Exception as e:
+        logger.error(f"Error processing voice input: {str(e)}")
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        })
