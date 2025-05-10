@@ -1,5 +1,14 @@
 from datetime import datetime
+from enum import Enum
 from app import db
+
+# Enum for severity levels
+class SeverityLevel(Enum):
+    LOW = "low"
+    MEDIUM = "medium" 
+    HIGH = "high"
+    SEVERE = "severe"
+    CRITICAL = "critical"
 
 class Protocol(db.Model):
     """Model for behavioral protocols stored in the system"""
@@ -88,3 +97,56 @@ class MLModel(db.Model):
     
     def __repr__(self):
         return f'<MLModel {self.name}>'
+
+
+# New models for enhanced behavioral support system
+
+class BehaviorType(db.Model):
+    """Model for categorizing different types of behaviors"""
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    description = db.Column(db.Text, nullable=True)
+    category = db.Column(db.String(50), nullable=True)  # E.g., "Verbal", "Physical", "Emotional"
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    behavior_protocols = db.relationship('BehaviorProtocol', backref='behavior_type', lazy=True)
+    
+    def __repr__(self):
+        return f'<BehaviorType {self.name}>'
+
+
+class BehaviorProtocol(db.Model):
+    """Model for connecting behaviors to protocols with severity levels"""
+    id = db.Column(db.Integer, primary_key=True)
+    behavior_type_id = db.Column(db.Integer, db.ForeignKey('behavior_type.id'), nullable=False)
+    protocol_id = db.Column(db.Integer, db.ForeignKey('protocol.id'), nullable=False)
+    severity_level = db.Column(db.String(20), nullable=False)  # Uses values from SeverityLevel enum
+    is_primary = db.Column(db.Boolean, default=False)  # Is this the primary protocol for this behavior/severity?
+    notes = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    def __repr__(self):
+        return f'<BehaviorProtocol {self.behavior_type_id}:{self.protocol_id}>'
+
+
+class Recommendation(db.Model):
+    """Model for storing additional recommendations, resources, and notes"""
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(200), nullable=False)
+    content = db.Column(db.Text, nullable=False)
+    category = db.Column(db.String(50), nullable=True)  # E.g., "Resource", "Training", "Best Practice"
+    behavior_type_id = db.Column(db.Integer, db.ForeignKey('behavior_type.id'), nullable=True)
+    protocol_id = db.Column(db.Integer, db.ForeignKey('protocol.id'), nullable=True)
+    severity_level = db.Column(db.String(20), nullable=True)  # Optional severity level filter
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    behavior_type = db.relationship('BehaviorType', backref='recommendations', lazy=True)
+    protocol = db.relationship('Protocol', backref='recommendations', lazy=True)
+    
+    def __repr__(self):
+        return f'<Recommendation {self.title}>'

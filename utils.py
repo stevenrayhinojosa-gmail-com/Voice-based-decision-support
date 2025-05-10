@@ -180,6 +180,174 @@ def get_protocol_tree(protocol_id):
         logger.error(f"Error getting protocol tree: {str(e)}")
         return None
 
+def add_sample_behavior_types():
+    """
+    Add sample behavior types to the database
+    """
+    from models import BehaviorType, db
+    
+    # Check if we already have behavior types
+    if BehaviorType.query.count() > 0:
+        return "Behavior types already exist"
+    
+    # Sample behavior types
+    behavior_types = [
+        {
+            "name": "Verbal Disruption",
+            "description": "Disruptive verbal behaviors like shouting, inappropriate language, or verbal defiance",
+            "category": "Verbal"
+        },
+        {
+            "name": "Physical Aggression",
+            "description": "Physical behaviors that may cause harm, such as hitting, pushing, or throwing objects",
+            "category": "Physical"
+        },
+        {
+            "name": "Emotional Outburst",
+            "description": "Intense emotional reactions like crying, shutting down, or emotional volatility",
+            "category": "Emotional"
+        },
+        {
+            "name": "Elopement",
+            "description": "Attempting to or successfully leaving a designated area without permission",
+            "category": "Physical"
+        },
+        {
+            "name": "Self-Injurious Behavior",
+            "description": "Behaviors that may cause self-harm, such as head banging, biting self, or scratching",
+            "category": "Physical"
+        },
+        {
+            "name": "Property Destruction",
+            "description": "Damaging property, breaking items, or vandalism",
+            "category": "Physical"
+        },
+        {
+            "name": "Non-compliance",
+            "description": "Refusing to follow directions or participate in required activities",
+            "category": "Behavioral"
+        },
+        {
+            "name": "Withdrawal",
+            "description": "Social withdrawal, refusal to engage, or hiding",
+            "category": "Emotional"
+        }
+    ]
+    
+    # Add behavior types to database
+    for behavior_data in behavior_types:
+        behavior = BehaviorType(**behavior_data)
+        db.session.add(behavior)
+    
+    db.session.commit()
+    return f"Added {len(behavior_types)} behavior types"
+
+
+def add_sample_recommendations():
+    """
+    Add sample recommendations to the database
+    """
+    from models import Recommendation, BehaviorType, Protocol, db
+    
+    # Check if we already have recommendations
+    if Recommendation.query.count() > 0:
+        return "Recommendations already exist"
+    
+    # Get some behavior types and protocols to link recommendations to
+    behavior_types = BehaviorType.query.all()
+    protocols = Protocol.query.all()
+    
+    if not behavior_types or not protocols:
+        return "Need behavior types and protocols first"
+    
+    # Sample recommendations
+    recommendations = [
+        {
+            "title": "De-escalation Strategies for Verbal Disruptions",
+            "content": "1. Remain calm and use a neutral tone of voice.\n2. Avoid power struggles.\n3. Offer choices when possible.\n4. Use reflective listening.\n5. Provide a quiet space for the student to regain composure.",
+            "category": "Best Practice",
+            "behavior_type_id": next((bt.id for bt in behavior_types if bt.name == "Verbal Disruption"), None),
+            "severity_level": "medium"
+        },
+        {
+            "title": "Safety First: Physical Aggression Response",
+            "content": "1. Ensure the safety of all students.\n2. Use approved safety techniques if trained.\n3. Call for additional support when needed.\n4. Document all incidents thoroughly.\n5. Follow up with a debriefing and safety plan.",
+            "category": "Emergency Response",
+            "behavior_type_id": next((bt.id for bt in behavior_types if bt.name == "Physical Aggression"), None),
+            "severity_level": "high"
+        },
+        {
+            "title": "Supporting Students During Emotional Crisis",
+            "content": "1. Validate feelings without judgment.\n2. Offer a calm, private space.\n3. Use simple, direct language.\n4. Teach and model emotional regulation techniques.\n5. Follow up with appropriate mental health support.",
+            "category": "Resource",
+            "behavior_type_id": next((bt.id for bt in behavior_types if bt.name == "Emotional Outburst"), None),
+            "severity_level": "medium"
+        },
+        {
+            "title": "Elopement Prevention Strategies",
+            "content": "1. Position staff strategically near exits.\n2. Create visual boundaries.\n3. Establish clear expectations for movement.\n4. Develop a signal system for student needs.\n5. Review and practice safety protocols regularly.",
+            "category": "Prevention",
+            "behavior_type_id": next((bt.id for bt in behavior_types if bt.name == "Elopement"), None),
+            "severity_level": "high"
+        },
+        {
+            "title": "General Classroom Management Resources",
+            "content": "1. Establish consistent routines and expectations.\n2. Use positive reinforcement strategies.\n3. Build relationships with all students.\n4. Create a supportive classroom environment.\n5. Implement proactive behavior management strategies.",
+            "category": "Training",
+            "protocol_id": protocols[0].id if protocols else None
+        }
+    ]
+    
+    # Add recommendations to database
+    for rec_data in recommendations:
+        recommendation = Recommendation(**rec_data)
+        db.session.add(recommendation)
+    
+    db.session.commit()
+    return f"Added {len(recommendations)} recommendations"
+
+
+def link_behaviors_to_protocols():
+    """
+    Link behavior types to protocols with severity levels
+    """
+    from models import BehaviorProtocol, BehaviorType, Protocol, SeverityLevel, db
+    
+    # Check if we already have behavior-protocol links
+    if BehaviorProtocol.query.count() > 0:
+        return "Behavior-protocol links already exist"
+    
+    # Get behavior types and protocols
+    behavior_types = BehaviorType.query.all()
+    protocols = Protocol.query.all()
+    
+    if not behavior_types or not protocols:
+        return "Need behavior types and protocols first"
+    
+    # Create links between behaviors and protocols with different severity levels
+    links = []
+    
+    # For demonstration, link each behavior type to at least one protocol
+    for i, behavior_type in enumerate(behavior_types):
+        # Select protocol (cycle through available protocols)
+        protocol = protocols[i % len(protocols)]
+        
+        # Create links for different severity levels
+        for severity in [SeverityLevel.LOW.value, SeverityLevel.MEDIUM.value, SeverityLevel.HIGH.value]:
+            link = BehaviorProtocol(
+                behavior_type_id=behavior_type.id,
+                protocol_id=protocol.id,
+                severity_level=severity,
+                is_primary=(severity == SeverityLevel.MEDIUM.value),  # Medium severity is primary protocol
+                notes=f"Default protocol for {behavior_type.name} with {severity} severity"
+            )
+            db.session.add(link)
+            links.append(link)
+    
+    db.session.commit()
+    return f"Created {len(links)} behavior-protocol links"
+
+
 def add_sample_protocol():
     """
     Add a sample behavioral protocol to the database for testing
