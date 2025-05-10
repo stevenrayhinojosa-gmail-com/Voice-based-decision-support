@@ -26,6 +26,9 @@
                             <a href="{{ url_for('decision_support') }}" class="btn btn-primary me-2">
                                 <i class="fas fa-lightbulb me-2"></i> Start Decision Support
                             </a>
+                            <a href="{{ url_for('voice_decision_support') }}" class="btn btn-info me-2">
+                                <i class="fas fa-microphone me-2"></i> Voice Support
+                            </a>
                             <a href="{{ url_for('dashboard') }}" class="btn btn-outline-light">
                                 <i class="fas fa-chart-line me-2"></i> Go to Dashboard
                             </a>
@@ -146,7 +149,8 @@
                             <h5><i class="fas fa-arrow-right text-primary me-2"></i> Step 4: Use Decision Support</h5>
                             <p>
                                 Apply protocols and models to get recommendations for behavior responses.
-                                <a href="{{ url_for('decision_support') }}" class="ms-2">Start now</a>
+                                <a href="{{ url_for('decision_support') }}" class="ms-2">Start now</a> or 
+                                <a href="{{ url_for('voice_decision_support') }}">try voice support</a>
                             </p>
                         </div>
                     </div>
