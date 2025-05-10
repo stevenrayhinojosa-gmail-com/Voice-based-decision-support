@@ -805,20 +805,87 @@ def voice_input():
         data = request.get_json() if request.is_json else {}
         speech_text = data.get('speech_text', '')
         protocol_id = data.get('protocol_id')
+        behavior_type_id = data.get('behavior_type_id')
+        severity = data.get('severity')
         
-        if not speech_text or not protocol_id:
+        # If behavior type is provided but protocol isn't, try to find an appropriate protocol
+        if behavior_type_id and not protocol_id:
+            from models import BehaviorProtocol
+            # Look for a protocol that matches the behavior type and severity
+            behavior_protocol = BehaviorProtocol.query.filter_by(
+                behavior_type_id=int(behavior_type_id), 
+                severity_level=severity,
+                is_primary=True
+            ).first()
+            
+            if behavior_protocol:
+                protocol_id = behavior_protocol.protocol_id
+                logger.info(f"Selected protocol {protocol_id} based on behavior type and severity")
+        
+        if not speech_text:
             return jsonify({
                 "success": False,
-                "error": "Missing speech text or protocol ID"
+                "error": "Missing speech text"
             })
         
-        # Process through our decision model
-        analysis_result = analyze_speech_for_decision(speech_text, int(protocol_id))
+        response_data = {
+            "success": False,
+            "speech_text": speech_text
+        }
         
-        # Add the original speech text to the result
-        analysis_result['speech_text'] = speech_text
+        # If we have a protocol, use our decision model
+        if protocol_id:
+            # Process through our decision model
+            analysis_result = analyze_speech_for_decision(speech_text, int(protocol_id))
+            
+            # Add behavior type info if available
+            if behavior_type_id:
+                from models import BehaviorType
+                behavior_type = BehaviorType.query.get(int(behavior_type_id))
+                if behavior_type:
+                    analysis_result['behavior_type'] = {
+                        'id': behavior_type.id,
+                        'name': behavior_type.name,
+                        'category': behavior_type.category
+                    }
+            
+            return jsonify(analysis_result)
         
-        return jsonify(analysis_result)
+        # If no protocol, but we have behavior type, look for recommendations
+        elif behavior_type_id:
+            from models import BehaviorType, Recommendation
+            
+            behavior_type = BehaviorType.query.get(int(behavior_type_id))
+            
+            # Look for a recommendation specific to this behavior type and severity
+            recommendation = Recommendation.query.filter_by(
+                behavior_type_id=int(behavior_type_id),
+                severity_level=severity
+            ).first()
+            
+            if recommendation:
+                response_data.update({
+                    "success": True,
+                    "is_recommendation": True,
+                    "recommendation": recommendation.content,
+                    "recommendation_title": recommendation.title,
+                    "behavior_type": {
+                        'id': behavior_type.id,
+                        'name': behavior_type.name,
+                        'category': behavior_type.category
+                    }
+                })
+                return jsonify(response_data)
+            else:
+                response_data.update({
+                    "error": f"No specific recommendation found for this behavior type at {severity} severity"
+                })
+                return jsonify(response_data)
+        else:
+            return jsonify({
+                "success": False,
+                "error": "Missing protocol ID or behavior type"
+            })
         
     except Exception as e:
         logger.error(f"Error processing voice input: {str(e)}")

@@ -35,17 +35,30 @@
                     <div class="tab-content" id="inputTabsContent">
                         <!-- Text Input Tab -->
                         <div class="tab-pane fade show active" id="text-input" role="tabpanel" aria-labelledby="text-tab">
-                            <form method="POST" action="{{ url_for('teacher_input') }}">
+                            <form method="POST" action="{{ url_for('rapid_input') }}">
                                 <div class="mb-4">
-                                    <label for="protocol_id" class="form-label fw-bold">Select Protocol:</label>
-                                    <select class="form-select" id="protocol_id" name="protocol_id" required>
+                                    <label for="behavior_type_id" class="form-label fw-bold">Behavior Type:</label>
+                                    <select class="form-select" id="behavior_type_id" name="behavior_type_id">
+                                        <option value="" selected disabled>Select behavior type...</option>
+                                        {% for behavior_type in behavior_types %}
+                                        <option value="{{ behavior_type.id }}">{{ behavior_type.name }} ({{ behavior_type.category }})</option>
+                                        {% endfor %}
+                                    </select>
+                                    <div class="form-text">
+                                        Select the type of behavior to get relevant protocols and recommendations
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-4">
+                                    <label for="protocol_id" class="form-label fw-bold">Select Protocol (Optional):</label>
+                                    <select class="form-select" id="protocol_id" name="protocol_id">
                                         <option value="" selected disabled>Choose a behavioral protocol...</option>
                                         {% for protocol in protocols %}
                                         <option value="{{ protocol.id }}">{{ protocol.name }}</option>
                                         {% endfor %}
                                     </select>
                                     <div class="form-text">
-                                        Choose the appropriate protocol for this behavioral situation
+                                        Choose a specific protocol, or one will be selected based on behavior type
                                     </div>
                                 </div>
                                 
@@ -61,11 +74,9 @@
                                 <div class="mb-4">
                                     <label for="severity" class="form-label fw-bold">Severity Level:</label>
                                     <select class="form-select" id="severity" name="severity">
-                                        <option value="mild">Mild - Minor disruption</option>
-                                        <option value="moderate" selected>Moderate - Notable disruption</option>
-                                        <option value="serious">Serious - Significant disruption</option>
-                                        <option value="severe">Severe - Safety concern</option>
-                                        <option value="critical">Critical - Emergency</option>
+                                        {% for value, label in severity_levels %}
+                                        <option value="{{ value }}" {% if value == 'medium' %}selected{% endif %}>{{ label }}</option>
+                                        {% endfor %}
                                     </select>
                                 </div>
                                 
@@ -81,8 +92,18 @@
                         <div class="tab-pane fade" id="voice-input" role="tabpanel" aria-labelledby="voice-tab">
                             <div class="voice-input-container">
                                 <div class="mb-4">
-                                    <label for="voice_protocol_id" class="form-label fw-bold">Select Protocol:</label>
-                                    <select class="form-select" id="voice_protocol_id" required>
+                                    <label for="voice_behavior_type_id" class="form-label fw-bold">Behavior Type:</label>
+                                    <select class="form-select" id="voice_behavior_type_id">
+                                        <option value="" selected disabled>Select behavior type...</option>
+                                        {% for behavior_type in behavior_types %}
+                                        <option value="{{ behavior_type.id }}">{{ behavior_type.name }} ({{ behavior_type.category }})</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                
+                                <div class="mb-4">
+                                    <label for="voice_protocol_id" class="form-label fw-bold">Select Protocol (Optional):</label>
+                                    <select class="form-select" id="voice_protocol_id">
                                         <option value="" selected disabled>Choose a behavioral protocol...</option>
                                         {% for protocol in protocols %}
                                         <option value="{{ protocol.id }}">{{ protocol.name }}</option>
@@ -93,11 +114,9 @@
                                 <div class="mb-4">
                                     <label for="voice_severity" class="form-label fw-bold">Severity Level:</label>
                                     <select class="form-select" id="voice_severity">
-                                        <option value="mild">Mild - Minor disruption</option>
-                                        <option value="moderate" selected>Moderate - Notable disruption</option>
-                                        <option value="serious">Serious - Significant disruption</option>
-                                        <option value="severe">Severe - Safety concern</option>
-                                        <option value="critical">Critical - Emergency</option>
+                                        {% for value, label in severity_levels %}
+                                        <option value="{{ value }}" {% if value == 'medium' %}selected{% endif %}>{{ label }}</option>
+                                        {% endfor %}
                                     </select>
                                 </div>
                                 
@@ -305,6 +324,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 },
                 body: JSON.stringify({
                     speech_text: voiceTranscript.value,
+                    behavior_type_id: document.getElementById('voice_behavior_type_id').value,
                     protocol_id: voiceProtocolSelect.value,
                     severity: voiceSeveritySelect.value
                 })
@@ -312,69 +332,167 @@ document.addEventListener('DOMContentLoaded', function() {
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    // Format the results nicely
-                    const keywordList = data.keywords && data.keywords.length > 0 
-                        ? data.keywords.map(k => `<span class="keywords-detected">${k}</span>`).join(' ')
-                        : '<em>No specific keywords detected</em>';
+                    let resultHTML = '';
                     
-                    let resultHTML = `
-                        <div class="card border-${data.is_emergency ? 'danger' : 'success'} mb-3">
-                            <div class="card-header bg-${data.is_emergency ? 'danger' : 'success'} text-white">
-                                <h5 class="mb-0">
-                                    ${data.is_emergency 
-                                        ? '<i class="fas fa-exclamation-triangle me-2"></i> Emergency Situation Detected' 
-                                        : '<i class="fas fa-check-circle me-2"></i> Analysis Complete'}
-                                </h5>
+                    // If it's a direct recommendation from behavior type
+                    if (data.is_recommendation) {
+                        // Get behavior type info if available
+                        const behaviorTypeInfo = data.behavior_type 
+                            ? `<div class="mb-3">
+                                <h6>Behavior Type:</h6>
+                                <p>${data.behavior_type.name} (${data.behavior_type.category})</p>
+                              </div>`
+                            : '';
+                            
+                        resultHTML = `
+                            <div class="card border-success mb-3">
+                                <div class="card-header bg-success text-white">
+                                    <h5 class="mb-0">
+                                        <i class="fas fa-check-circle me-2"></i> Analysis Complete
+                                    </h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="mb-3">
+                                        <h6>Your description:</h6>
+                                        <p class="border-bottom pb-2">"${data.speech_text}"</p>
+                                    </div>
+                                    
+                                    ${behaviorTypeInfo}
+                                    
+                                    <div class="alert alert-info mt-3">
+                                        <h6><i class="fas fa-lightbulb me-2"></i> ${data.recommendation_title || 'Recommendation'}:</h6>
+                                        <p class="mb-0">${data.recommendation}</p>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="card-body">
-                                <div class="mb-3">
-                                    <h6>Your description:</h6>
-                                    <p class="border-bottom pb-2">"${data.speech_text}"</p>
+                        `;
+                        
+                        // Save to session
+                        fetch('/api/save_recommendation', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                behavior_text: data.speech_text,
+                                behavior_type_id: document.getElementById('voice_behavior_type_id').value,
+                                severity: voiceSeveritySelect.value,
+                                recommendation: data.recommendation,
+                                recommendation_title: data.recommendation_title
+                            })
+                        });
+                    } 
+                    // If it's a protocol-based decision
+                    else {
+                        // Format keywords list
+                        const keywordList = data.keywords && data.keywords.length > 0 
+                            ? data.keywords.map(k => `<span class="keywords-detected">${k}</span>`).join(' ')
+                            : '<em>No specific keywords detected</em>';
+                        
+                        // Get behavior type info if available
+                        const behaviorTypeInfo = data.behavior_type 
+                            ? `<div class="mb-3">
+                                <h6>Behavior Type:</h6>
+                                <p>${data.behavior_type.name} (${data.behavior_type.category})</p>
+                              </div>`
+                            : '';
+                            
+                        resultHTML = `
+                            <div class="card border-${data.is_emergency ? 'danger' : 'success'} mb-3">
+                                <div class="card-header bg-${data.is_emergency ? 'danger' : 'success'} text-white">
+                                    <h5 class="mb-0">
+                                        ${data.is_emergency 
+                                            ? '<i class="fas fa-exclamation-triangle me-2"></i> Emergency Situation Detected' 
+                                            : '<i class="fas fa-check-circle me-2"></i> Analysis Complete'}
+                                    </h5>
                                 </div>
-                                
-                                <div class="mb-3">
-                                    <h6>Decision point:</h6>
-                                    <p class="fw-bold">${data.decision_point.question}</p>
+                                <div class="card-body">
+                                    <div class="mb-3">
+                                        <h6>Your description:</h6>
+                                        <p class="border-bottom pb-2">"${data.speech_text}"</p>
+                                    </div>
+                                    
+                                    ${behaviorTypeInfo}
+                                    
+                                    ${data.decision_point ? `
+                                        <div class="mb-3">
+                                            <h6>Decision point:</h6>
+                                            <p class="fw-bold">${data.decision_point.question}</p>
+                                        </div>
+                                    ` : ''}
+                                    
+                                    ${data.selected_option ? `
+                                        <div class="mb-3">
+                                            <h6>Selected option:</h6>
+                                            <p>${data.selected_option.text}</p>
+                                        </div>
+                                    ` : ''}
+                                    
+                                    <div class="mb-3">
+                                        <h6>Keywords detected:</h6>
+                                        <div>${keywordList}</div>
+                                    </div>
                                 </div>
-                                
-                                <div class="mb-3">
-                                    <h6>Selected option:</h6>
-                                    <p>${data.selected_option.text}</p>
+                            </div>
+                        `;
+                        
+                        // Add recommendation if terminal
+                        if (data.is_terminal && data.recommendation) {
+                            resultHTML += `
+                                <div class="alert alert-${data.is_emergency ? 'danger' : 'info'} mt-3">
+                                    <h6><i class="fas fa-lightbulb me-2"></i> Recommendation:</h6>
+                                    <p class="mb-0">${data.recommendation}</p>
                                 </div>
-                                
-                                <div class="mb-3">
-                                    <h6>Keywords detected:</h6>
-                                    <div>${keywordList}</div>
-                                </div>
-                    `;
+                            `;
+                        
+                            // Save to session
+                            fetch('/api/save_recommendation', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    behavior_text: data.speech_text,
+                                    behavior_type_id: document.getElementById('voice_behavior_type_id').value,
+                                    keywords: data.keywords || [],
+                                    protocol_id: voiceProtocolSelect.value,
+                                    severity: voiceSeveritySelect.value,
+                                    is_terminal: true,
+                                    recommendation: data.recommendation
+                                })
+                            });
+                        }
+                    }
                     
-                    // Add recommendation if terminal
-                    if (data.is_terminal && data.recommendation) {
+                    // Add action buttons based on recommendation type
+                    if (data.is_recommendation) {
                         resultHTML += `
-                            <div class="alert alert-${data.is_emergency ? 'danger' : 'info'} mt-3">
-                                <h6><i class="fas fa-lightbulb me-2"></i> Recommendation:</h6>
-                                <p class="mb-0">${data.recommendation}</p>
+                            <div class="d-grid mt-3">
+                                <button type="button" class="btn btn-primary" onclick="window.location.href='/'">
+                                    <i class="fas fa-check me-2"></i> Accept Recommendation
+                                </button>
+                            </div>
+                        `;
+                    } else if (data.decision_point) {
+                        resultHTML += `
+                            <div class="d-grid mt-3">
+                                <form method="POST" action="${window.location.pathname}">
+                                    <input type="hidden" name="protocol_id" value="${data.decision_point.protocol_id}">
+                                    <input type="hidden" name="behavior_text" value="${data.speech_text}">
+                                    <input type="hidden" name="severity" value="${voiceSeveritySelect.value}">
+                                    <button type="submit" class="btn btn-primary">
+                                        ${data.is_terminal 
+                                            ? '<i class="fas fa-check me-2"></i> Accept Recommendation' 
+                                            : '<i class="fas fa-arrow-right me-2"></i> Continue Decision Process'}
+                                    </button>
+                                </form>
+                            </div>
+                        `;
+                    } else if (data.is_terminal && data.recommendation) {
+                        resultHTML += `
+                            <div class="d-grid mt-3">
+                                <button type="button" class="btn btn-primary" onclick="window.location.href='/'">
+                                    <i class="fas fa-check me-2"></i> Accept Recommendation
+                                </button>
                             </div>
                         `;
                     }
-                    
-                    resultHTML += `
-                            </div>
-                            <div class="card-footer">
-                                <div class="d-grid">
-                                    <form method="POST" action="${window.location.pathname}">
-                                        <input type="hidden" name="protocol_id" value="${data.decision_point.protocol_id}">
-                                        <input type="hidden" name="behavior_text" value="${data.speech_text}">
-                                        <input type="hidden" name="severity" value="${voiceSeveritySelect.value}">
-                                        <button type="submit" class="btn btn-primary">
-                                            ${data.is_terminal 
-                                                ? '<i class="fas fa-check me-2"></i> Accept Recommendation' 
-                                                : '<i class="fas fa-arrow-right me-2"></i> Continue Decision Process'}
-                                        </button>
-                                    </form>
-                                </div>
-                            </div>
-                        </div>
                     `;
                     
                     voiceAnalysisResult.innerHTML = resultHTML;
