@@ -70,6 +70,15 @@
                                 <option value="gym">Gymnasium</option>
                                 <option value="library">Library</option>
                             </select>
+                            <div class="mt-3 mb-1 fw-bold">Sample Voice Input</div>
+                            <select id="sampleTextSelect" class="form-select form-select-sm mx-auto" style="max-width: 200px;">
+                                <option value="agitated">Student is agitated</option>
+                                <option value="physical">Physical aggression</option>
+                                <option value="outburst">Emotional outburst</option>
+                                <option value="refusing">Refusing directions</option>
+                                <option value="wandering">Wandering around</option>
+                                <option value="emergency">Weapon present</option>
+                            </select>
                         </div>
                     </div>
                 </div>
@@ -181,6 +190,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const timePeriod = document.getElementById('timePeriod');
     const noiseLevel = document.getElementById('noiseLevel');
     const settingSelect = document.getElementById('settingSelect');
+    const sampleTextSelect = document.getElementById('sampleTextSelect');
     const isListening = document.getElementById('isListening');
     const startListeningBtn = document.getElementById('startListeningBtn');
     
@@ -247,10 +257,37 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     function processSpeech(setting) {
-        // In a real application, we would send actual recorded audio
-        // Here we're simulating with a predefined text
+        // Get the selected sample text option
+        const sampleType = sampleTextSelect.value;
+        
+        // Map the sample option to a complete sentence
+        let sampleText = "";
+        switch(sampleType) {
+            case 'agitated':
+                sampleText = "The student is becoming agitated and disruptive in class";
+                break;
+            case 'physical':
+                sampleText = "A student is pushing and getting physical with other students";
+                break;
+            case 'outburst':
+                sampleText = "The student is having an emotional outburst and crying uncontrollably";
+                break;
+            case 'refusing':
+                sampleText = "The student is refusing to follow directions and do their work";
+                break;
+            case 'wandering':
+                sampleText = "This student keeps wandering around the room and won't stay in their seat";
+                break;
+            case 'emergency':
+                sampleText = "A student just showed me they have a weapon in their backpack";
+                break;
+            default:
+                sampleText = "The student is becoming agitated and disruptive in class";
+        }
+        
+        // Create the speech data object with the selected text
         const speechData = {
-            text: "The student is becoming agitated and disruptive in class",
+            text: sampleText,
             setting: setting
         };
         
