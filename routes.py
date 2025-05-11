@@ -295,7 +295,7 @@ def decision_process():
     
     return render_template('decision_process.html',
                           protocol=protocol,
-                          dp=dp,
+                          decision_point=dp,  # Changed dp to decision_point to match template
                           options=options,
                           title="Decision Support Process")
 
