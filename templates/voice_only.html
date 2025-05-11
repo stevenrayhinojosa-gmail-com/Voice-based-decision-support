@@ -5,7 +5,11 @@
     <div class="row mb-4">
         <div class="col-md-12 text-center">
             <h1 class="mb-3">Voice Response System</h1>
-            <p class="lead">Just describe the student behavior - I'll tell you what to do</p>
+            <p class="lead">Press the button and speak to describe the student behavior</p>
+            <div class="alert alert-info d-inline-block">
+                <i class="fas fa-info-circle me-2"></i>
+                This system uses speech recognition to process your voice description
+            </div>
         </div>
     </div>
 
@@ -31,8 +35,8 @@
                                         <i class="fas fa-info-circle fa-2x"></i>
                                     </div>
                                     <div>
-                                        <div class="fw-bold">Press the button and speak naturally</div>
-                                        <p class="mb-0">Describe the behavior situation and I'll give you an instant recommendation based on your context.</p>
+                                        <div class="fw-bold">Press the button to simulate voice input</div>
+                                        <p class="mb-0">This will simulate voice recognition with different behavior scenarios to demonstrate the system's capabilities.</p>
                                     </div>
                                 </div>
                             </div>
@@ -70,15 +74,7 @@
                                 <option value="gym">Gymnasium</option>
                                 <option value="library">Library</option>
                             </select>
-                            <div class="mt-3 mb-1 fw-bold">Sample Voice Input</div>
-                            <select id="sampleTextSelect" class="form-select form-select-sm mx-auto" style="max-width: 200px;">
-                                <option value="agitated">Student is agitated</option>
-                                <option value="physical">Physical aggression</option>
-                                <option value="outburst">Emotional outburst</option>
-                                <option value="refusing">Refusing directions</option>
-                                <option value="wandering">Wandering around</option>
-                                <option value="emergency">Weapon present</option>
-                            </select>
+
                         </div>
                     </div>
                 </div>
@@ -190,7 +186,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const timePeriod = document.getElementById('timePeriod');
     const noiseLevel = document.getElementById('noiseLevel');
     const settingSelect = document.getElementById('settingSelect');
-    const sampleTextSelect = document.getElementById('sampleTextSelect');
+
     const isListening = document.getElementById('isListening');
     const startListeningBtn = document.getElementById('startListeningBtn');
     
@@ -257,37 +253,24 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     function processSpeech(setting) {
-        // Get the selected sample text option
-        const sampleType = sampleTextSelect.value;
+        // Simulate different speech texts randomly to make the demo more interesting
+        const possibleTexts = [
+            "The student is becoming agitated and disruptive in class",
+            "Student is throwing objects across the room and refusing to sit down",
+            "A student is crying uncontrollably and seems very anxious",
+            "Two students are pushing each other and using threatening language",
+            "Student refuses to do any work and is putting their head down on the desk",
+            "The student keeps getting out of seat and wandering around the classroom",
+            "A student is showing signs of escalating behavior and might hurt someone"
+        ];
         
-        // Map the sample option to a complete sentence
-        let sampleText = "";
-        switch(sampleType) {
-            case 'agitated':
-                sampleText = "The student is becoming agitated and disruptive in class";
-                break;
-            case 'physical':
-                sampleText = "A student is pushing and getting physical with other students";
-                break;
-            case 'outburst':
-                sampleText = "The student is having an emotional outburst and crying uncontrollably";
-                break;
-            case 'refusing':
-                sampleText = "The student is refusing to follow directions and do their work";
-                break;
-            case 'wandering':
-                sampleText = "This student keeps wandering around the room and won't stay in their seat";
-                break;
-            case 'emergency':
-                sampleText = "A student just showed me they have a weapon in their backpack";
-                break;
-            default:
-                sampleText = "The student is becoming agitated and disruptive in class";
-        }
+        // Choose a random text from the array
+        const randomIndex = Math.floor(Math.random() * possibleTexts.length);
+        const simulatedText = possibleTexts[randomIndex];
         
-        // Create the speech data object with the selected text
+        // Create the speech data object
         const speechData = {
-            text: sampleText,
+            text: simulatedText,
             setting: setting
         };
         
