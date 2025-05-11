@@ -20,6 +20,9 @@
                                 <i class="fas fa-microphone fa-2x text-white"></i>
                             </div>
                             <div id="statusText" class="h5 mb-0">Ready</div>
+                            <button id="startListeningBtn" class="btn btn-primary mt-3">
+                                <i class="fas fa-microphone-alt me-2"></i>Start Listening
+                            </button>
                         </div>
                         <div class="col-md-8">
                             <div class="alert alert-info mb-0">
@@ -28,7 +31,7 @@
                                         <i class="fas fa-info-circle fa-2x"></i>
                                     </div>
                                     <div>
-                                        <div class="fw-bold">Just speak naturally</div>
+                                        <div class="fw-bold">Press the button and speak naturally</div>
                                         <p class="mb-0">Describe the behavior situation and I'll give you an instant recommendation based on your context.</p>
                                     </div>
                                 </div>
@@ -179,6 +182,10 @@ document.addEventListener('DOMContentLoaded', function() {
     const noiseLevel = document.getElementById('noiseLevel');
     const settingSelect = document.getElementById('settingSelect');
     const isListening = document.getElementById('isListening');
+    const startListeningBtn = document.getElementById('startListeningBtn');
+    
+    // Add event listener to the start listening button
+    startListeningBtn.addEventListener('click', startVoiceRecognition);
 
     // Update context data periodically
     function updateContextData() {
@@ -203,13 +210,17 @@ document.addEventListener('DOMContentLoaded', function() {
             .catch(error => console.error('Error fetching context data:', error));
     }
 
-    // Start voice recognition automatically
+    // Start voice recognition when button is clicked
     function startVoiceRecognition() {
         if (isListening.value === 'true') return;
         
         statusIndicator.className = 'd-inline-block rounded-circle p-3 mb-2 bg-danger';
         statusText.textContent = 'Listening...';
         isListening.value = 'true';
+        
+        // Disable the button while listening
+        startListeningBtn.disabled = true;
+        startListeningBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Listening...';
         
         // Simulated speech recognition
         // In a production environment, this would be replaced with actual WebSpeech API code
@@ -263,14 +274,13 @@ document.addEventListener('DOMContentLoaded', function() {
             // Display recommendation
             displayRecommendation(data);
             
-            // Restart listening after a delay
+            // Reset button state
             setTimeout(() => {
                 statusIndicator.className = 'd-inline-block rounded-circle p-3 mb-2 bg-secondary';
                 statusText.textContent = 'Ready';
-                
-                // Auto-restart listening after 15 seconds
-                setTimeout(startVoiceRecognition, 10000);
-            }, 5000);
+                startListeningBtn.disabled = false;
+                startListeningBtn.innerHTML = '<i class="fas fa-microphone-alt me-2"></i>Start Listening';
+            }, 2000);
         })
         .catch(error => {
             console.error('Error processing speech:', error);
@@ -279,8 +289,9 @@ document.addEventListener('DOMContentLoaded', function() {
             statusText.textContent = 'Error';
             isListening.value = 'false';
             
-            // Try again after a delay
-            setTimeout(startVoiceRecognition, 5000);
+            // Reset button state
+            startListeningBtn.disabled = false;
+            startListeningBtn.innerHTML = '<i class="fas fa-microphone-alt me-2"></i>Start Listening';
         });
     }
     
@@ -417,9 +428,6 @@ document.addEventListener('DOMContentLoaded', function() {
     // Update context data initially and set interval
     updateContextData();
     setInterval(updateContextData, 10000); // Update every 10 seconds
-    
-    // Start voice recognition on page load
-    setTimeout(startVoiceRecognition, 2000);
     
     // Add some CSS for the listening animation
     const style = document.createElement('style');
