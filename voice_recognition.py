@@ -222,7 +222,7 @@ def extract_keywords_from_speech(speech_text):
     
     return keywords
 
-def analyze_speech_for_decision(speech_text, protocol_id=None, time_period=None, noise_level_db=None, is_transition_period=False):
+def analyze_speech_for_decision(speech_text, protocol_id=None, time_period=None, noise_level_db=None, is_transition_period=False, setting=None):
     """
     Analyze speech text and map it to decision points in a protocol
     Returns the appropriate option based on the speech content and context data
@@ -233,6 +233,7 @@ def analyze_speech_for_decision(speech_text, protocol_id=None, time_period=None,
     - time_period: The current school time period (e.g., "morning-block-1", "lunch")
     - noise_level_db: The ambient noise level in decibels
     - is_transition_period: Whether the current time period is a transition period
+    - setting: The physical setting where the behavior is occurring (e.g., "classroom", "hallway")
     """
     from models import Protocol, DecisionPoint, DecisionOption
     

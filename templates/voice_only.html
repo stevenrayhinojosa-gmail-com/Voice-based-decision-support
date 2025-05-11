@@ -182,7 +182,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Update context data periodically
     function updateContextData() {
-        fetch('/get_context_data')
+        fetch('/api/context_data')
             .then(response => response.json())
             .then(data => {
                 // Update context display
