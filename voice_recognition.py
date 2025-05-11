@@ -387,6 +387,43 @@ def analyze_speech_for_decision(speech_text, protocol_id=None, time_period=None,
                 "severity": "medium",
                 "recommendation": "Provide clear, limited choices + positive reinforcement system",
                 "explanation": "End-of-day fatigue can lead to defiance and limit student response to intervention"
+            },
+            # Rule 5: Setting-specific - Hallway disruption
+            {
+                "condition": lambda: any(k in ["running", "yelling", "pushing"] for k in keywords) and 
+                                     setting == "hallway",
+                "behavior": "hallway_disruption",
+                "severity": "medium",
+                "recommendation": "1. Position yourself at student's eye level<br>2. Use proximity control<br>3. Provide clear directions for hallway expectations<br>4. Escort student to destination if necessary",
+                "explanation": "Hallway behavior requires immediate intervention to prevent escalation"
+            },
+            # Rule 6: Setting-specific - Cafeteria behavior management
+            {
+                "condition": lambda: any(k in ["throwing", "food", "mess", "disruptive"] for k in keywords) and 
+                                     setting == "cafeteria" and
+                                     noise_level_db and noise_level_db > -55,
+                "behavior": "cafeteria_disruption",
+                "severity": "medium",
+                "recommendation": "1. Approach calmly without drawing attention<br>2. Use non-verbal cues first<br>3. Provide clear expectations<br>4. Assign alternative seating if necessary",
+                "explanation": "High noise levels in cafeteria require careful intervention approaches"
+            },
+            # Rule 7: Setting-specific - Playground conflict
+            {
+                "condition": lambda: any(k in ["fighting", "dispute", "aggressive", "hitting", "conflict"] for k in keywords) and 
+                                     setting == "playground",
+                "behavior": "playground_conflict",
+                "severity": "high",
+                "recommendation": "1. Safely separate students if physical<br>2. Use SAMA protective stance<br>3. Call for support personnel<br>4. Move other students away from area",
+                "explanation": "Playground conflicts can escalate quickly due to open space and limited supervision"
+            },
+            # Rule 8: Setting-specific - Classroom work refusal
+            {
+                "condition": lambda: any(k in ["refusing", "work", "assignment", "defiant"] for k in keywords) and 
+                                     setting == "classroom",
+                "behavior": "work_refusal",
+                "severity": "low",
+                "recommendation": "1. Offer two specific choices for completing work<br>2. Provide alternative workspace option<br>3. Break task into smaller components<br>4. Use visual timer for work periods",
+                "explanation": "Classroom work refusal often stems from task avoidance or skill deficits"
             }
         ]
         
