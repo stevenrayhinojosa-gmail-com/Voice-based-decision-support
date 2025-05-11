@@ -583,6 +583,11 @@ def get_context_data():
 def voice_only():
     """Voice-only interface for behavioral support that starts automatically"""
     return render_template('voice_only.html', title="Voice-Only Behavioral Support")
+    
+@app.route('/text_input', methods=['GET'])
+def text_input():
+    """Text-based interface for behavioral support with custom input"""
+    return render_template('text_input.html', title="Text Input Behavioral Support")
 
 @app.route('/api/context_data', methods=['GET'])
 def api_context_data():

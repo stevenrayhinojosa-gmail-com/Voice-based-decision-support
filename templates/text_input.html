@@ -1,0 +1,423 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row mb-4">
+        <div class="col-md-12 text-center">
+            <h1 class="mb-3">Text-Based Behavior Analysis</h1>
+            <p class="lead">Describe the student behavior in your own words</p>
+        </div>
+    </div>
+
+    <!-- Input Form -->
+    <div class="row mb-4">
+        <div class="col-lg-10 offset-lg-1">
+            <div class="card border-primary">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0"><i class="fas fa-keyboard me-2"></i> Enter Behavior Description</h4>
+                </div>
+                <div class="card-body">
+                    <form id="behaviorForm">
+                        <div class="mb-3">
+                            <label for="behaviorText" class="form-label fw-bold">Describe what's happening:</label>
+                            <textarea id="behaviorText" name="behaviorText" 
+                                     class="form-control" rows="4" 
+                                     placeholder="Example: The student is throwing objects and refusing to follow directions..."></textarea>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="settingSelect" class="form-label fw-bold">Current Location:</label>
+                                <select id="settingSelect" name="settingSelect" class="form-select">
+                                    <option value="classroom">Classroom</option>
+                                    <option value="hallway">Hallway</option>
+                                    <option value="cafeteria">Cafeteria</option>
+                                    <option value="playground">Playground</option>
+                                    <option value="gym">Gymnasium</option>
+                                    <option value="library">Library</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-2 fw-bold">System Context:</div>
+                                <div class="d-flex gap-3">
+                                    <div id="timePeriodBadge" class="badge bg-info rounded-pill fs-6 mb-0 d-inline-block">Loading...</div>
+                                    <div id="noiseLevelBadge" class="badge bg-success rounded-pill fs-6 mb-0 d-inline-block">Loading...</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="d-grid">
+                            <button type="submit" id="submitBtn" class="btn btn-primary">
+                                <i class="fas fa-search me-2"></i>Analyze Behavior
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Results Section (initially hidden) -->
+    <div id="resultsSection" class="row mb-4" style="display: none;">
+        <div class="col-lg-10 offset-lg-1">
+            <div class="card border-success">
+                <div class="card-header bg-success text-white">
+                    <h4 class="mb-0"><i class="fas fa-check-circle me-2"></i> Behavior Analysis Results</h4>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <div class="card h-100">
+                                <div class="card-header bg-light">
+                                    <h5 class="mb-0">Behavior Assessment</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="mb-3">
+                                        <div class="fw-bold">Behavior Type:</div>
+                                        <div id="behaviorType" class="badge bg-primary fs-6 mb-2"></div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <div class="fw-bold">Severity Level:</div>
+                                        <div id="severityLevel" class="badge bg-warning fs-6 mb-2"></div>
+                                    </div>
+                                    <div id="emergencyAlert" class="alert alert-danger" style="display: none;">
+                                        <i class="fas fa-exclamation-triangle me-2"></i>
+                                        <strong>Emergency Situation Detected!</strong> Immediate action required.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card h-100">
+                                <div class="card-header bg-light">
+                                    <h5 class="mb-0">Context Factors</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="mb-3">
+                                        <div class="fw-bold">Setting:</div>
+                                        <div id="settingValue" class="badge bg-info fs-6 mb-2"></div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <div class="fw-bold">Time Period:</div>
+                                        <div id="timePeriodValue" class="badge bg-secondary fs-6 mb-2"></div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <div class="fw-bold">Noise Level:</div>
+                                        <div id="noiseLevelValue" class="badge bg-success fs-6 mb-2"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <div class="card">
+                            <div class="card-header bg-primary text-white">
+                                <h5 class="mb-0">Recommended Protocol</h5>
+                            </div>
+                            <div class="card-body">
+                                <div id="protocolName" class="alert alert-info"></div>
+                                <div id="contextNoteSection" style="display: none;">
+                                    <div class="alert alert-warning">
+                                        <strong><i class="fas fa-lightbulb me-2"></i> Contextual Note:</strong>
+                                        <div id="contextNote"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <div class="card">
+                            <div class="card-header bg-success text-white">
+                                <h5 class="mb-0">Recommended Actions</h5>
+                            </div>
+                            <div class="card-body">
+                                <div id="recommendationText" class="card-text"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Examples -->
+    <div class="row">
+        <div class="col-lg-10 offset-lg-1">
+            <div class="card">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0"><i class="fas fa-lightbulb me-2"></i> Example Situations</h5>
+                </div>
+                <div class="card-body">
+                    <p>Click any example to fill the form automatically:</p>
+                    <div class="d-flex flex-wrap gap-2">
+                        <button class="btn btn-outline-primary example-btn" data-text="Student is throwing objects across the room and refusing to sit down.">Throwing Objects</button>
+                        <button class="btn btn-outline-primary example-btn" data-text="Student is crying uncontrollably and seems to be having an anxiety attack.">Anxiety Attack</button>
+                        <button class="btn btn-outline-primary example-btn" data-text="Two students are pushing each other and using threatening language.">Physical Confrontation</button>
+                        <button class="btn btn-outline-primary example-btn" data-text="Student refuses to do any work and is putting head down on desk.">Work Refusal</button>
+                        <button class="btn btn-outline-primary example-btn" data-text="Student keeps getting out of seat and wandering around the classroom.">Out of Seat</button>
+                        <button class="btn btn-outline-primary example-btn" data-text="Student has shown me a weapon in their backpack.">Weapon Present</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Elements
+    const behaviorForm = document.getElementById('behaviorForm');
+    const behaviorText = document.getElementById('behaviorText');
+    const settingSelect = document.getElementById('settingSelect');
+    const submitBtn = document.getElementById('submitBtn');
+    const resultsSection = document.getElementById('resultsSection');
+    const timePeriodBadge = document.getElementById('timePeriodBadge');
+    const noiseLevelBadge = document.getElementById('noiseLevelBadge');
+    const behaviorType = document.getElementById('behaviorType');
+    const severityLevel = document.getElementById('severityLevel');
+    const emergencyAlert = document.getElementById('emergencyAlert');
+    const settingValue = document.getElementById('settingValue');
+    const timePeriodValue = document.getElementById('timePeriodValue');
+    const noiseLevelValue = document.getElementById('noiseLevelValue');
+    const protocolName = document.getElementById('protocolName');
+    const contextNoteSection = document.getElementById('contextNoteSection');
+    const contextNote = document.getElementById('contextNote');
+    const recommendationText = document.getElementById('recommendationText');
+    const exampleButtons = document.querySelectorAll('.example-btn');
+
+    // Click event for example buttons
+    exampleButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            behaviorText.value = this.getAttribute('data-text');
+            behaviorText.focus();
+        });
+    });
+
+    // Form submission
+    behaviorForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const text = behaviorText.value.trim();
+        if (!text) {
+            alert('Please enter a description of the behavior.');
+            return;
+        }
+        
+        // Update UI state during processing
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Processing...';
+        
+        // Prepare data for API
+        const speechData = {
+            text: text,
+            setting: settingSelect.value
+        };
+        
+        // Send request to the API
+        fetch('/voice_capture', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(speechData)
+        })
+        .then(response => response.json())
+        .then(data => {
+            // Reset button state
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i class="fas fa-search me-2"></i>Analyze Behavior';
+            
+            // Display results
+            displayResults(data);
+            
+            // Show results section
+            resultsSection.style.display = 'block';
+            
+            // Scroll to results
+            resultsSection.scrollIntoView({ behavior: 'smooth' });
+        })
+        .catch(error => {
+            console.error('Error processing data:', error);
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i class="fas fa-search me-2"></i>Analyze Behavior';
+            alert('An error occurred while processing your request. Please try again.');
+        });
+    });
+
+    // Display results from API response
+    function displayResults(data) {
+        // Update behavior type
+        if (data.analysis && data.analysis.keywords && data.analysis.keywords.length > 0) {
+            const keywords = data.analysis.keywords.join(', ');
+            behaviorType.textContent = keywords.charAt(0).toUpperCase() + keywords.slice(1);
+        } else {
+            behaviorType.textContent = 'General Behavior Issue';
+        }
+        
+        // Update severity level
+        let severity = 'Medium';
+        let severityClass = 'bg-warning';
+        
+        if (data.analysis && data.analysis.protocol_analysis && data.analysis.protocol_analysis.confidence) {
+            const confidence = data.analysis.protocol_analysis.confidence;
+            if (confidence > 0.7) {
+                severity = 'High';
+                severityClass = 'bg-danger';
+            } else if (confidence < 0.4) {
+                severity = 'Low';
+                severityClass = 'bg-success';
+            }
+        }
+        
+        severityLevel.textContent = severity;
+        severityLevel.className = `badge ${severityClass} fs-6 mb-2`;
+        
+        // Emergency alert
+        if (data.analysis && data.analysis.is_emergency) {
+            emergencyAlert.style.display = 'block';
+        } else {
+            emergencyAlert.style.display = 'none';
+        }
+        
+        // Context values
+        settingValue.textContent = settingSelect.options[settingSelect.selectedIndex].text;
+        
+        if (data.context) {
+            timePeriodValue.textContent = data.context.time_period.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+            
+            const noise = parseFloat(data.context.noise_level_db);
+            noiseLevelValue.textContent = noise.toFixed(1) + ' dB';
+            
+            // Set noise level color
+            if (noise < -70) {
+                noiseLevelValue.className = 'badge bg-success fs-6 mb-2';
+            } else if (noise < -55) {
+                noiseLevelValue.className = 'badge bg-warning fs-6 mb-2';
+            } else {
+                noiseLevelValue.className = 'badge bg-danger fs-6 mb-2';
+            }
+        }
+        
+        // Protocol name
+        if (data.analysis && data.analysis.protocol_id) {
+            if (data.analysis.protocol_analysis && data.analysis.protocol_analysis.selected_option) {
+                protocolName.textContent = `Selected Option: ${data.analysis.protocol_analysis.selected_option.text}`;
+            } else {
+                protocolName.textContent = `Protocol #${data.analysis.protocol_id}`;
+            }
+        } else {
+            protocolName.textContent = 'General Behavioral Response Protocol';
+        }
+        
+        // Context note
+        if (data.analysis && data.analysis.context_note) {
+            contextNote.textContent = data.analysis.context_note;
+            contextNoteSection.style.display = 'block';
+        } else {
+            contextNoteSection.style.display = 'none';
+        }
+        
+        // Recommendation text
+        let recommendation = '';
+        
+        if (data.analysis && data.analysis.protocol_analysis && data.analysis.protocol_analysis.recommendation) {
+            recommendation = data.analysis.protocol_analysis.recommendation;
+        } else if (data.analysis && data.analysis.is_emergency) {
+            recommendation = `
+                <ol>
+                    <li class="mb-2"><strong>Ensure immediate safety:</strong> Remove other students from the area.</li>
+                    <li class="mb-2"><strong>Call for administrative support.</strong></li>
+                    <li class="mb-2"><strong>Follow school emergency protocols.</strong></li>
+                    <li><strong>Document the incident</strong> as soon as safely possible.</li>
+                </ol>
+            `;
+        } else {
+            const settingSpecificRecs = {
+                classroom: `
+                    <ol>
+                        <li class="mb-2"><strong>Redirect attention:</strong> Use a pre-arranged visual or verbal cue.</li>
+                        <li class="mb-2"><strong>Offer choices:</strong> Provide 2-3 acceptable options to give student sense of control.</li>
+                        <li class="mb-2"><strong>Positive reinforcement:</strong> Acknowledge any attempt to self-regulate.</li>
+                        <li><strong>Take a break:</strong> Allow student to use a designated calm-down area if needed.</li>
+                    </ol>
+                `,
+                hallway: `
+                    <ol>
+                        <li class="mb-2"><strong>Minimize audience:</strong> Redirect other students away from the situation.</li>
+                        <li class="mb-2"><strong>Clear, simple directions:</strong> Use a calm voice and simple language.</li>
+                        <li class="mb-2"><strong>Offer space:</strong> Give appropriate physical distance while maintaining supervision.</li>
+                        <li><strong>Escort to quiet area:</strong> Move to a less stimulating environment if possible.</li>
+                    </ol>
+                `,
+                cafeteria: `
+                    <ol>
+                        <li class="mb-2"><strong>Reduce sensory input:</strong> Move to a quieter area of the cafeteria.</li>
+                        <li class="mb-2"><strong>Offer alternative lunch location:</strong> If behavior continues, provide an option to eat in a quieter space.</li>
+                        <li class="mb-2"><strong>Clear expectations:</strong> Review cafeteria behavior expectations.</li>
+                        <li><strong>Positive peer modeling:</strong> Seat with peers who demonstrate appropriate behavior.</li>
+                    </ol>
+                `,
+                playground: `
+                    <ol>
+                        <li class="mb-2"><strong>Redirect to alternative activity:</strong> Suggest a different game or area of the playground.</li>
+                        <li class="mb-2"><strong>Buddy system:</strong> Pair with a peer who can model appropriate play.</li>
+                        <li class="mb-2"><strong>Take a break:</strong> Provide a supervised cool-down period at the edge of the play area.</li>
+                        <li><strong>Clear boundaries:</strong> Review specific playground rules that relate to the behavior.</li>
+                    </ol>
+                `,
+                gym: `
+                    <ol>
+                        <li class="mb-2"><strong>Modify activity:</strong> Adjust expectations or rules to reduce frustration.</li>
+                        <li class="mb-2"><strong>Offer alternatives:</strong> Provide a different role or task within the activity.</li>
+                        <li class="mb-2"><strong>Take a break:</strong> Allow a brief supervised break from physical activity.</li>
+                        <li><strong>Positive reinforcement:</strong> Recognize efforts to rejoin and participate appropriately.</li>
+                    </ol>
+                `,
+                library: `
+                    <ol>
+                        <li class="mb-2"><strong>Whispered reminders:</strong> Quietly restate expectations for library behavior.</li>
+                        <li class="mb-2"><strong>Redirect focus:</strong> Suggest a specific book or activity of interest.</li>
+                        <li class="mb-2"><strong>Provide a quiet corner:</strong> Direct to a more isolated study area if available.</li>
+                        <li><strong>Alternative task:</strong> Offer a helpful role like book shelving to channel energy.</li>
+                    </ol>
+                `
+            };
+            
+            recommendation = settingSpecificRecs[settingSelect.value] || settingSpecificRecs['classroom'];
+        }
+        
+        recommendationText.innerHTML = recommendation;
+    }
+
+    // Update context data
+    function updateContextData() {
+        fetch('/api/context_data')
+            .then(response => response.json())
+            .then(data => {
+                timePeriodBadge.textContent = data.time_period.name.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                
+                const noise = parseFloat(data.noise_level_db);
+                noiseLevelBadge.textContent = noise.toFixed(1) + ' dB';
+                
+                // Change noise level color
+                if (noise < -70) {
+                    noiseLevelBadge.className = 'badge bg-success rounded-pill fs-6 mb-0 d-inline-block';
+                } else if (noise < -55) {
+                    noiseLevelBadge.className = 'badge bg-warning rounded-pill fs-6 mb-0 d-inline-block';
+                } else {
+                    noiseLevelBadge.className = 'badge bg-danger rounded-pill fs-6 mb-0 d-inline-block';
+                }
+            })
+            .catch(error => console.error('Error fetching context data:', error));
+    }
+
+    // Initialize context data and set refresh interval
+    updateContextData();
+    setInterval(updateContextData, 10000);
+});
+</script>
+{% endblock %}
