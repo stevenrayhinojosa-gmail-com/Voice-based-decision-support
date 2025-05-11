@@ -1,0 +1,442 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row mb-4">
+        <div class="col-md-12 text-center">
+            <h1 class="mb-3">Voice Response System</h1>
+            <p class="lead">Just describe the student behavior - I'll tell you what to do</p>
+        </div>
+    </div>
+
+    <!-- Status panels -->
+    <div class="row mb-4">
+        <div class="col-lg-10 offset-lg-1">
+            <div class="card shadow">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col-md-4 text-center mb-3 mb-md-0">
+                            <div id="statusIndicator" class="d-inline-block rounded-circle p-3 mb-2 bg-secondary">
+                                <i class="fas fa-microphone fa-2x text-white"></i>
+                            </div>
+                            <div id="statusText" class="h5 mb-0">Ready</div>
+                        </div>
+                        <div class="col-md-8">
+                            <div class="alert alert-info mb-0">
+                                <div class="d-flex align-items-center">
+                                    <div class="me-3">
+                                        <i class="fas fa-info-circle fa-2x"></i>
+                                    </div>
+                                    <div>
+                                        <div class="fw-bold">Just speak naturally</div>
+                                        <p class="mb-0">Describe the behavior situation and I'll give you an instant recommendation based on your context.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Context Information -->
+    <div class="row mb-4">
+        <div class="col-lg-10 offset-lg-1">
+            <div class="card bg-light">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-clock me-2"></i> Current Context</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4 text-center border-end">
+                            <div class="mb-1 fw-bold">Time Period</div>
+                            <div id="timePeriod" class="badge bg-info rounded-pill fs-6 mb-0">Loading...</div>
+                        </div>
+                        <div class="col-md-4 text-center border-end">
+                            <div class="mb-1 fw-bold">Noise Level</div>
+                            <div id="noiseLevel" class="badge bg-success rounded-pill fs-6 mb-0">Loading...</div>
+                        </div>
+                        <div class="col-md-4 text-center">
+                            <div class="mb-1 fw-bold">Setting</div>
+                            <select id="settingSelect" class="form-select form-select-sm mx-auto" style="max-width: 150px;">
+                                <option value="classroom">Classroom</option>
+                                <option value="hallway">Hallway</option>
+                                <option value="cafeteria">Cafeteria</option>
+                                <option value="playground">Playground</option>
+                                <option value="gym">Gymnasium</option>
+                                <option value="library">Library</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Transcription Display -->
+    <div class="row mb-4">
+        <div class="col-lg-10 offset-lg-1">
+            <div class="card border-primary">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0"><i class="fas fa-comment me-2"></i> Voice Input</h4>
+                </div>
+                <div class="card-body">
+                    <p id="transcriptionText" class="lead mb-0 min-height-100">
+                        <em class="text-muted">Your speech will appear here...</em>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recommendation Display -->
+    <div class="row">
+        <div class="col-lg-10 offset-lg-1">
+            <div id="recommendationCard" class="card border-success mb-4" style="display: none;">
+                <div class="card-header bg-success text-white">
+                    <h4 class="mb-0"><i class="fas fa-check-circle me-2"></i> Recommendation</h4>
+                </div>
+                <div class="card-body">
+                    <div id="behaviorTypeSection" class="mb-3">
+                        <div class="fw-bold">Behavior Type:</div>
+                        <div id="behaviorType" class="badge bg-primary mb-1"></div>
+                    </div>
+                    
+                    <div id="severitySection" class="mb-3">
+                        <div class="fw-bold">Severity Level:</div>
+                        <div id="severityLevel" class="badge bg-warning mb-1"></div>
+                    </div>
+                    
+                    <div id="emergencyAlert" class="alert alert-danger" style="display: none;">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>Emergency signals detected!</strong> This situation requires immediate attention.
+                    </div>
+                    
+                    <div class="mb-3">
+                        <h5 class="card-title">Recommended Protocol:</h5>
+                        <div id="protocolName" class="alert alert-info"></div>
+                    </div>
+                    
+                    <div id="contextNoteSection" class="mb-3" style="display: none;">
+                        <div class="alert alert-warning">
+                            <strong><i class="fas fa-lightbulb me-2"></i> Contextual Note:</strong>
+                            <div id="contextNote"></div>
+                        </div>
+                    </div>
+                    
+                    <div id="actionSection">
+                        <h5 class="card-title">Recommended Actions:</h5>
+                        <div id="actionSteps" class="card bg-light">
+                            <div class="card-body">
+                                <p id="recommendationText" class="card-text"></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Tips Card -->
+            <div class="card mb-4">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0"><i class="fas fa-lightbulb me-2"></i> Example Phrases</h5>
+                </div>
+                <div class="card-body">
+                    <p class="mb-3">Try these phrases to get started:</p>
+                    <ul class="mb-0">
+                        <li class="mb-2">"A student is throwing objects in the classroom"</li>
+                        <li class="mb-2">"The student is refusing to do any work during class"</li>
+                        <li class="mb-2">"Student is having an anxiety attack in the cafeteria"</li>
+                        <li class="mb-2">"A child is showing aggressive behavior toward other students"</li>
+                        <li>"Student is constantly disrupting the class with outbursts"</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Hidden elements for API communication -->
+<input type="hidden" id="isListening" value="false">
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Elements
+    const statusIndicator = document.getElementById('statusIndicator');
+    const statusText = document.getElementById('statusText');
+    const transcriptionText = document.getElementById('transcriptionText');
+    const recommendationCard = document.getElementById('recommendationCard');
+    const behaviorType = document.getElementById('behaviorType');
+    const severityLevel = document.getElementById('severityLevel');
+    const emergencyAlert = document.getElementById('emergencyAlert');
+    const protocolName = document.getElementById('protocolName');
+    const contextNoteSection = document.getElementById('contextNoteSection');
+    const contextNote = document.getElementById('contextNote');
+    const recommendationText = document.getElementById('recommendationText');
+    const timePeriod = document.getElementById('timePeriod');
+    const noiseLevel = document.getElementById('noiseLevel');
+    const settingSelect = document.getElementById('settingSelect');
+    const isListening = document.getElementById('isListening');
+
+    // Update context data periodically
+    function updateContextData() {
+        fetch('/get_context_data')
+            .then(response => response.json())
+            .then(data => {
+                // Update context display
+                timePeriod.textContent = data.time_period.name.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                
+                const noise = parseFloat(data.noise_level_db);
+                noiseLevel.textContent = noise.toFixed(1) + ' dB';
+                
+                // Change noise level color based on value
+                if (noise < -70) {
+                    noiseLevel.className = 'badge bg-success rounded-pill fs-6 mb-0';
+                } else if (noise < -55) {
+                    noiseLevel.className = 'badge bg-warning rounded-pill fs-6 mb-0';
+                } else {
+                    noiseLevel.className = 'badge bg-danger rounded-pill fs-6 mb-0';
+                }
+            })
+            .catch(error => console.error('Error fetching context data:', error));
+    }
+
+    // Start voice recognition automatically
+    function startVoiceRecognition() {
+        if (isListening.value === 'true') return;
+        
+        statusIndicator.className = 'd-inline-block rounded-circle p-3 mb-2 bg-danger';
+        statusText.textContent = 'Listening...';
+        isListening.value = 'true';
+        
+        // Simulated speech recognition
+        // In a production environment, this would be replaced with actual WebSpeech API code
+        // but for demo purposes we're simulating the process
+        
+        // Start animation to show system is listening
+        transcriptionText.innerHTML = '<em class="text-muted">Listening...</em>';
+        transcriptionText.classList.add('listening-animation');
+        
+        // Hide previous recommendation if any
+        recommendationCard.style.display = 'none';
+        
+        // After a few seconds (simulating speech capture)
+        setTimeout(() => {
+            transcriptionText.classList.remove('listening-animation');
+            transcriptionText.innerHTML = '<em class="text-muted">Processing your speech...</em>';
+            
+            // Capture setting from select box
+            const setting = settingSelect.value;
+            
+            // Send to speech processing endpoint
+            processSpeech(setting);
+        }, 5000);
+    }
+    
+    function processSpeech(setting) {
+        // In a real application, we would send actual recorded audio
+        // Here we're simulating with a predefined text
+        const speechData = {
+            text: "The student is becoming agitated and disruptive in class",
+            setting: setting
+        };
+        
+        fetch('/voice_capture', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(speechData)
+        })
+        .then(response => response.json())
+        .then(data => {
+            // Reset status
+            statusIndicator.className = 'd-inline-block rounded-circle p-3 mb-2 bg-success';
+            statusText.textContent = 'Finished';
+            isListening.value = 'false';
+            
+            // Update transcription
+            transcriptionText.textContent = data.text;
+            
+            // Display recommendation
+            displayRecommendation(data);
+            
+            // Restart listening after a delay
+            setTimeout(() => {
+                statusIndicator.className = 'd-inline-block rounded-circle p-3 mb-2 bg-secondary';
+                statusText.textContent = 'Ready';
+                
+                // Auto-restart listening after 15 seconds
+                setTimeout(startVoiceRecognition, 10000);
+            }, 5000);
+        })
+        .catch(error => {
+            console.error('Error processing speech:', error);
+            transcriptionText.textContent = 'Error processing speech. Please try again.';
+            statusIndicator.className = 'd-inline-block rounded-circle p-3 mb-2 bg-warning';
+            statusText.textContent = 'Error';
+            isListening.value = 'false';
+            
+            // Try again after a delay
+            setTimeout(startVoiceRecognition, 5000);
+        });
+    }
+    
+    function displayRecommendation(data) {
+        // Show recommendation card
+        recommendationCard.style.display = 'block';
+        
+        // Update behavior type
+        if (data.analysis && data.analysis.protocol_analysis && data.analysis.keywords) {
+            const keywords = data.analysis.keywords.join(', ');
+            behaviorType.textContent = keywords.charAt(0).toUpperCase() + keywords.slice(1);
+        } else {
+            behaviorType.textContent = 'General Behavior Issue';
+        }
+        
+        // Update severity level
+        let severity = 'Medium';
+        let severityClass = 'bg-warning';
+        
+        if (data.analysis && data.analysis.protocol_analysis && data.analysis.protocol_analysis.confidence) {
+            const confidence = data.analysis.protocol_analysis.confidence;
+            if (confidence > 0.7) {
+                severity = 'High';
+                severityClass = 'bg-danger';
+            } else if (confidence < 0.4) {
+                severity = 'Low';
+                severityClass = 'bg-success';
+            }
+        }
+        
+        severityLevel.textContent = severity;
+        severityLevel.className = `badge ${severityClass} mb-1`;
+        
+        // Show emergency alert if needed
+        if (data.analysis && data.analysis.is_emergency) {
+            emergencyAlert.style.display = 'block';
+        } else {
+            emergencyAlert.style.display = 'none';
+        }
+        
+        // Update protocol name
+        if (data.analysis && data.analysis.protocol_id) {
+            if (data.analysis.protocol_analysis && data.analysis.protocol_analysis.selected_option) {
+                protocolName.textContent = `Selected Option: ${data.analysis.protocol_analysis.selected_option.text}`;
+            } else {
+                protocolName.textContent = `Protocol #${data.analysis.protocol_id}`;
+            }
+        } else {
+            protocolName.textContent = 'General Behavioral Response Protocol';
+        }
+        
+        // Add context note if available
+        if (data.analysis && data.analysis.context_note && data.analysis.context_note.trim() !== '') {
+            contextNote.textContent = data.analysis.context_note;
+            contextNoteSection.style.display = 'block';
+        } else if (data.context) {
+            // Generate a context note based on the environmental factors
+            let envNote = '';
+            if (data.context.noise_level_db < -70) {
+                envNote = 'The current quiet environment may help with de-escalation strategies.';
+            } else if (data.context.noise_level_db > -60) {
+                envNote = 'The current noisy environment may contribute to student agitation.';
+            }
+            
+            if (data.context.is_transition_period) {
+                envNote += ' Transition periods often increase behavioral challenges.';
+            }
+            
+            if (envNote) {
+                contextNote.textContent = envNote;
+                contextNoteSection.style.display = 'block';
+            } else {
+                contextNoteSection.style.display = 'none';
+            }
+        } else {
+            contextNoteSection.style.display = 'none';
+        }
+        
+        // Update recommendation text
+        let recommendation = '';
+        
+        if (data.analysis && data.analysis.protocol_analysis) {
+            if (data.analysis.protocol_analysis.recommendation) {
+                recommendation = data.analysis.protocol_analysis.recommendation;
+            } else if (data.analysis.protocol_analysis.selected_option && 
+                       data.analysis.protocol_analysis.selected_option.recommendation) {
+                recommendation = data.analysis.protocol_analysis.selected_option.recommendation;
+            } else {
+                // Generate a general recommendation based on behavior keywords
+                if (data.analysis.keywords) {
+                    const keywords = data.analysis.keywords;
+                    
+                    if (keywords.includes('agitated') || keywords.includes('disruptive')) {
+                        recommendation = "1. Stay calm and speak in a clear, neutral tone<br>" +
+                                         "2. Remove distractions or triggers if possible<br>" +
+                                         "3. Provide a calming activity or quiet space<br>" +
+                                         "4. Use distraction or redirection strategies";
+                    } else if (keywords.includes('anxiety') || keywords.includes('stressed')) {
+                        recommendation = "1. Speak calmly and provide reassurance<br>" +
+                                         "2. Help student use deep breathing techniques<br>" +
+                                         "3. Provide a quiet, safe space<br>" +
+                                         "4. Reduce demands temporarily";
+                    } else if (keywords.includes('aggressive') || keywords.includes('violent')) {
+                        recommendation = "1. Ensure safety of all students<br>" +
+                                         "2. Use SAMA safety protocols<br>" +
+                                         "3. Call for additional support<br>" +
+                                         "4. Document incident following school protocol";
+                    } else if (keywords.includes('refusal') || keywords.includes('defiant')) {
+                        recommendation = "1. Provide clear, simple choices<br>" +
+                                         "2. Avoid power struggles<br>" +
+                                         "3. Use PBIS reinforcement strategies<br>" +
+                                         "4. Follow through with established consequences";
+                    } else {
+                        recommendation = "1. Observe and document the behavior<br>" +
+                                         "2. Use PBIS reinforcement strategies<br>" +
+                                         "3. Provide clear expectations<br>" +
+                                         "4. Follow classroom management protocols";
+                    }
+                }
+            }
+        }
+        
+        // If we still don't have a recommendation, provide a generic one
+        if (!recommendation) {
+            recommendation = "1. Remain calm and use a neutral tone<br>" +
+                             "2. Ensure safety of all students<br>" +
+                             "3. Redirect student to appropriate behavior<br>" +
+                             "4. Follow school protocol for documentation";
+        }
+        
+        recommendationText.innerHTML = recommendation;
+    }
+
+    // Update context data initially and set interval
+    updateContextData();
+    setInterval(updateContextData, 10000); // Update every 10 seconds
+    
+    // Start voice recognition on page load
+    setTimeout(startVoiceRecognition, 2000);
+    
+    // Add some CSS for the listening animation
+    const style = document.createElement('style');
+    style.innerHTML = `
+        .min-height-100 {
+            min-height: 100px;
+        }
+        .listening-animation {
+            animation: listening-pulse 1.5s infinite;
+        }
+        @keyframes listening-pulse {
+            0% { opacity: 0.5; }
+            50% { opacity: 1; }
+            100% { opacity: 0.5; }
+        }
+    `;
+    document.head.appendChild(style);
+});
+</script>
+{% endblock %}

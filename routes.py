@@ -579,39 +579,54 @@ def get_context_data():
             'error': str(e)
         })
 
+@app.route('/voice_only', methods=['GET'])
+def voice_only():
+    """Voice-only interface for behavioral support that starts automatically"""
+    return render_template('voice_only.html', title="Voice-Only Behavioral Support")
+
+@app.route('/api/context_data', methods=['GET'])
+def api_context_data():
+    """API endpoint to get current context data"""
+    try:
+        context_data = context_sensor.get_context_data()
+        return jsonify(context_data)
+    except Exception as e:
+        logger.error(f"Error getting context data: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
 @app.route('/api/voice_capture', methods=['POST'])
+@app.route('/voice_capture', methods=['POST'])
 def voice_capture():
     """API endpoint for capturing voice input with context awareness"""
     try:
-        # In real-world scenario, we would call the voice recognizer here
-        # result = voice_recognizer.listen_once()
-        
-        # For demo purposes, simulate a successful voice recognition
         # Check if the request contains JSON data
         if request.is_json:
             data = request.get_json()
-            simulated_text = data.get('text', 'The student is becoming agitated and disruptive in class')
+            speech_text = data.get('text', 'The student is becoming agitated and disruptive in class')
+            setting = data.get('setting', 'classroom')
         else:
-            simulated_text = 'The student is becoming agitated and disruptive in class'
+            speech_text = request.form.get('voice_text', 'The student is becoming agitated and disruptive in class')
+            setting = request.form.get('setting', 'classroom')
         
         # Get context data for enhanced analysis
-        from context_sensors import context_sensor
         context_data = context_sensor.get_context_data()
         time_period = context_data['time_period']['name']
         noise_level = context_data['noise_level_db']
         is_transition = context_data['time_period']['is_transition']
         
+        # Log the context data
+        logger.info(f"Context data during voice input: Time: {time_period}, Noise: {noise_level}dB, Is Transition: {is_transition}")
+        
         # Process keywords and emergency detection
-        from voice_recognition import extract_keywords_from_speech
-        keywords = extract_keywords_from_speech(simulated_text)
+        keywords = extract_keywords_from_speech(speech_text)
         
         # Determine if emergency based on keywords and context
-        is_emergency = ('emergency' in simulated_text.lower() or 'urgent' in simulated_text.lower() or 
-                      'immediate' in simulated_text.lower() or 'danger' in simulated_text.lower())
+        is_emergency = ('emergency' in speech_text.lower() or 'urgent' in speech_text.lower() or 
+                      'immediate' in speech_text.lower() or 'danger' in speech_text.lower())
         
         # Adjust emergency detection based on context
         # Higher noise levels or transition periods might lead to misinterpretations
-        if noise_level > -40 and not any(kw in simulated_text.lower() for kw in ['emergency', 'urgent', 'danger']):
+        if noise_level > -40 and not any(kw in speech_text.lower() for kw in ['emergency', 'urgent', 'danger']):
             # In very noisy environments, be more conservative about emergency detection
             is_emergency = False
         
@@ -622,10 +637,30 @@ def voice_capture():
         elif noise_level > -50:
             context_note = "Note: Current noise levels are elevated, which may impact behavior."
         
+        # Save behavioral data with context information
+        try:
+            # Default protocol ID (if not specified)
+            protocol_id = session.get('current_protocol_id', 1)
+            
+            behavior_data = BehavioralData(
+                subject_id='anonymous',  # Anonymous subject for voice input
+                behavior_description=speech_text,
+                protocol_used=protocol_id,
+                time_period=time_period,
+                noise_level_db=noise_level,
+                context=f"Voice input during {time_period} period, setting: {setting}",
+                intensity=8 if is_emergency else 5  # Estimated intensity
+            )
+            db.session.add(behavior_data)
+            db.session.commit()
+            logger.info(f"Saved behavioral data with context: ID={behavior_data.id}")
+        except Exception as e:
+            logger.error(f"Error saving behavior data: {str(e)}")
+        
         # Enhanced result with context data
         result = {
             "success": True,
-            "text": simulated_text,
+            "text": speech_text,
             "context": {
                 "time_period": time_period,
                 "noise_level_db": noise_level,
@@ -634,30 +669,28 @@ def voice_capture():
             "analysis": {
                 "keywords": keywords,
                 "is_emergency": is_emergency,
-                "sentiment": "concerned" if "worried" in simulated_text.lower() else "neutral",
+                "sentiment": "concerned" if "worried" in speech_text.lower() else "neutral",
                 "context_note": context_note
             }
         }
         
         # Process with protocol if one is selected
-        protocol_id = session.get('current_protocol_id')
-        if protocol_id:
-            # Analyze the speech for decision support with context data
-            analysis = analyze_speech_for_decision(
-                result["text"], 
-                protocol_id,
-                time_period=time_period,
-                noise_level_db=noise_level,
-                is_transition_period=is_transition
-            )
-            
-            # Add the analysis results to our response
-            result["analysis"]["protocol_id"] = protocol_id
-            result["analysis"]["protocol_analysis"] = analysis
-        else:
-            # If no protocol selected, add that information to the result
-            result["analysis"]["protocol_status"] = "No protocol selected"
-            
+        protocol_id = session.get('current_protocol_id', 1)
+        
+        # Analyze the speech for decision support with context data
+        analysis = analyze_speech_for_decision(
+            result["text"], 
+            protocol_id,
+            time_period=time_period,
+            noise_level_db=noise_level,
+            is_transition_period=is_transition,
+            setting=setting
+        )
+        
+        # Add the analysis results to our response
+        result["analysis"]["protocol_id"] = protocol_id
+        result["analysis"]["protocol_analysis"] = analysis
+        
         # Return the results using our custom AlchemyEncoder for SQLAlchemy objects
         return app.response_class(
             response=json.dumps(result, cls=AlchemyEncoder),
@@ -675,29 +708,6 @@ def voice_capture():
             status=500,
             mimetype='application/json'
         )
-
-        # For demo purposes, simulate a successful voice recognition
-        # Check if the request contains JSON data
-        if request.is_json:
-            data = request.get_json()
-            simulated_text = data.get('text', 'The student is becoming agitated and disruptive in class')
-        else:
-            simulated_text = 'The student is becoming agitated and disruptive in class'
-        
-        # Get context data for enhanced analysis
-        from context_sensors import context_sensor
-        context_data = context_sensor.get_context_data()
-        time_period = context_data['time_period']['name']
-        noise_level = context_data['noise_level_db']
-        is_transition = context_data['time_period']['is_transition']
-        
-        # Process keywords and emergency detection
-        from voice_recognition import extract_keywords_from_speech
-        keywords = extract_keywords_from_speech(simulated_text)
-        
-        # Determine if emergency based on keywords and context
-        is_emergency = ('emergency' in simulated_text.lower() or 'urgent' in simulated_text.lower() or 
-                      'immediate' in simulated_text.lower() or 'danger' in simulated_text.lower())
         
         # Adjust emergency detection based on context
         # Higher noise levels or transition periods might lead to misinterpretations
