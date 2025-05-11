@@ -36,10 +36,7 @@ class AlchemyEncoder(json.JSONEncoder):
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger('routes')
 
-@app.route('/')
-def index():
-    """Home page route"""
-    return render_template('index.html', title="Behavioral Decision Support")
+# Remove this route as we now have a direct route to voice_only at '/'
 
 @app.route('/dashboard')
 def dashboard():

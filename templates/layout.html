@@ -18,9 +18,9 @@
     <!-- Navbar -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
         <div class="container">
-            <a class="navbar-brand" href="{{ url_for('index') }}">
-                <i class="fas fa-brain me-2"></i>
-                Behavioral Decision Support
+            <a class="navbar-brand" href="{{ url_for('voice_only') }}">
+                <i class="fas fa-microphone-alt me-2"></i>
+                Voice Support System
             </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
@@ -28,58 +28,8 @@
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav ms-auto">
                     <li class="nav-item">
-                        <a class="nav-link {% if request.path == url_for('index') %}active{% endif %}" href="{{ url_for('index') }}">
-                            <i class="fas fa-home me-1"></i> Home
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link {% if request.path == url_for('dashboard') %}active{% endif %}" href="{{ url_for('dashboard') }}">
-                            <i class="fas fa-chart-line me-1"></i> Dashboard
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link {% if request.path == url_for('protocols') %}active{% endif %}" href="{{ url_for('protocols') }}">
-                            <i class="fas fa-sitemap me-1"></i> Protocols
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link {% if request.path == url_for('data_entry') %}active{% endif %}" href="{{ url_for('data_entry') }}">
-                            <i class="fas fa-database me-1"></i> Data Entry
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link {% if request.path == url_for('analyze') %}active{% endif %}" href="{{ url_for('analyze') }}">
-                            <i class="fas fa-chart-pie me-1"></i> Analyze
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link {% if request.path == url_for('decision_support') %}active{% endif %}" href="{{ url_for('decision_support') }}">
-                            <i class="fas fa-lightbulb me-1"></i> Decision Support
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link {% if request.path == url_for('voice_decision_support') %}active{% endif %}" href="{{ url_for('voice_decision_support') }}">
-                            <i class="fas fa-microphone me-1"></i> Voice Support
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link {% if request.path == url_for('voice_only') %}active{% endif %}" href="{{ url_for('voice_only') }}">
-                            <i class="fas fa-headset me-1"></i> Voice Only Mode
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link {% if request.path == url_for('text_input') %}active{% endif %}" href="{{ url_for('text_input') }}">
-                            <i class="fas fa-keyboard me-1"></i> Text Input Mode
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link {% if request.path == url_for('teacher_input') %}active{% endif %}" href="{{ url_for('teacher_input') }}">
-                            <i class="fas fa-chalkboard-teacher me-1"></i> Teacher Input
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link {% if request.path == url_for('natural_language_query') %}active{% endif %}" href="{{ url_for('natural_language_query') }}">
-                            <i class="fas fa-comment-dots me-1"></i> NL Query
+                        <a class="nav-link active" href="{{ url_for('voice_only') }}">
+                            <i class="fas fa-microphone-alt me-1"></i> Voice Support System
                         </a>
                     </li>
                 </ul>
@@ -116,23 +66,10 @@
                         A Python-based system for processing and analyzing behavioral data
                     </p>
                 </div>
-                <div class="col-md-3">
-                    <h5>Features</h5>
+                <div class="col-md-6">
+                    <h5>Voice Support System</h5>
                     <ul class="list-unstyled">
-                        <li><a href="{{ url_for('protocols') }}" class="text-decoration-none text-light">Protocols</a></li>
-                        <li><a href="{{ url_for('data_entry') }}" class="text-decoration-none text-light">Data Collection</a></li>
-                        <li><a href="{{ url_for('analyze') }}" class="text-decoration-none text-light">ML Analysis</a></li>
-                        <li><a href="{{ url_for('decision_support') }}" class="text-decoration-none text-light">Decision Support</a></li>
-                        <li><a href="{{ url_for('voice_decision_support') }}" class="text-decoration-none text-light">Voice Support</a></li>
-                        <li><a href="{{ url_for('natural_language_query') }}" class="text-decoration-none text-light">NL Query</a></li>
-                    </ul>
-                </div>
-                <div class="col-md-3">
-                    <h5>Resources</h5>
-                    <ul class="list-unstyled">
-                        <li><a href="#" class="text-decoration-none text-light">Documentation</a></li>
-                        <li><a href="#" class="text-decoration-none text-light">API</a></li>
-                        <li><a href="#" class="text-decoration-none text-light">Support</a></li>
+                        <li><a href="{{ url_for('voice_only') }}" class="text-decoration-none text-light">Voice Recognition Interface</a></li>
                     </ul>
                 </div>
             </div>
