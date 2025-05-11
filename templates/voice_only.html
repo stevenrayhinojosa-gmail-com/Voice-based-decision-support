@@ -24,8 +24,8 @@
                                 <i class="fas fa-microphone fa-2x text-white"></i>
                             </div>
                             <div id="statusText" class="h5 mb-0">Ready</div>
-                            <button id="startListeningBtn" class="btn btn-primary mt-3">
-                                <i class="fas fa-microphone-alt me-2"></i>Start Listening
+                            <button id="startListeningBtn" class="btn btn-lg btn-danger mt-3 px-4 py-3 rounded-pill shadow-sm">
+                                <i class="fas fa-microphone-alt me-2"></i>Activate Voice Input
                             </button>
                         </div>
                         <div class="col-md-8">
@@ -144,20 +144,38 @@
                 </div>
             </div>
             
-            <!-- Tips Card -->
+            <!-- Voice Simulation Info Card -->
             <div class="card mb-4">
-                <div class="card-header bg-light">
-                    <h5 class="mb-0"><i class="fas fa-lightbulb me-2"></i> Example Phrases</h5>
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0"><i class="fas fa-microphone-alt me-2"></i> Voice Recognition Simulation</h5>
                 </div>
                 <div class="card-body">
-                    <p class="mb-3">Try these phrases to get started:</p>
-                    <ul class="mb-0">
-                        <li class="mb-2">"A student is throwing objects in the classroom"</li>
-                        <li class="mb-2">"The student is refusing to do any work during class"</li>
-                        <li class="mb-2">"Student is having an anxiety attack in the cafeteria"</li>
-                        <li class="mb-2">"A child is showing aggressive behavior toward other students"</li>
-                        <li>"Student is constantly disrupting the class with outbursts"</li>
-                    </ul>
+                    <div class="alert alert-info mb-3">
+                        <i class="fas fa-info-circle me-2"></i> 
+                        <strong>How this works:</strong> When you press the "Start Listening" button, the system will simulate receiving one of these voice inputs randomly:
+                    </div>
+                    <div class="list-group mb-0">
+                        <div class="list-group-item list-group-item-action d-flex align-items-center">
+                            <i class="fas fa-comment me-3 text-primary"></i>
+                            <span>"A student is becoming agitated and disruptive in class"</span>
+                        </div>
+                        <div class="list-group-item list-group-item-action d-flex align-items-center">
+                            <i class="fas fa-comment me-3 text-primary"></i>
+                            <span>"Student is throwing objects across the room"</span>
+                        </div>
+                        <div class="list-group-item list-group-item-action d-flex align-items-center">
+                            <i class="fas fa-comment me-3 text-primary"></i>
+                            <span>"A student is crying uncontrollably and seems anxious"</span>
+                        </div>
+                        <div class="list-group-item list-group-item-action d-flex align-items-center">
+                            <i class="fas fa-comment me-3 text-primary"></i>
+                            <span>"Two students are pushing each other"</span>
+                        </div>
+                        <div class="list-group-item list-group-item-action d-flex align-items-center">
+                            <i class="fas fa-comment me-3 text-primary"></i>
+                            <span>"A student is showing signs of escalating behavior"</span>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
