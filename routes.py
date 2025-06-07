@@ -795,6 +795,138 @@ def test_encouragement_workflow():
         logger.error(f"Error testing encouragement workflow: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
+@app.route('/test_student_bip_workflow', methods=['POST'])
+def test_student_bip_workflow():
+    """Test the complete student BIP awareness system during behavioral incidents"""
+    try:
+        session_id = "test_bip_session"
+        
+        # Test with a student who has a BIP (Johnny Rivera - stu001)
+        test_speech = "Johnny Rivera is having an aggressive outburst and throwing items around the classroom"
+        
+        # Step 1: Identify student from speech
+        student_info = student_manager.identify_student_from_speech(test_speech)
+        
+        # Step 2: Create incident with student information
+        if student_info:
+            initial_data = {
+                'location': 'classroom',
+                'behavior_description': test_speech,
+                'keywords': ['aggressive', 'throwing'],
+                'severity': 'high',
+                'time_period': 'instructional',
+                'noise_level_db': -45.0,
+                'is_transition': False,
+                'is_crisis': True,
+                'student_info': student_info
+            }
+            
+            # Step 3: Start incident log
+            incident_id = incident_reporter.start_incident_log(session_id, initial_data)
+            
+            # Step 4: Create personalized behavior log
+            behavior_log_path = student_manager.create_behavior_log_entry(
+                student_info['student_id'], 
+                initial_data
+            )
+            
+            # Step 5: Test BIP-enhanced recommendation
+            base_recommendation = "Apply standard de-escalation protocols and maintain safe distance."
+            enhanced_recommendation = student_manager.get_bip_enhanced_recommendation(
+                base_recommendation, student_info
+            )
+            
+            # Step 6: Update behavior log with recommendation
+            if behavior_log_path:
+                student_manager.update_behavior_log(
+                    student_info['student_id'], 
+                    behavior_log_path, 
+                    {
+                        'recommendation': enhanced_recommendation,
+                        'bip_enhanced': True
+                    }
+                )
+            
+            # Step 7: End incident and update behavior log
+            report_result = incident_reporter.end_incident(session_id, outcome="de-escalated using BIP strategies")
+            
+            if behavior_log_path:
+                student_manager.update_behavior_log(
+                    student_info['student_id'], 
+                    behavior_log_path, 
+                    {'outcome': 'successfully resolved with BIP strategies'}
+                )
+            
+            return jsonify({
+                'success': True,
+                'test_completed': True,
+                'student_identified': True,
+                'student_info': student_info,
+                'incident_id': incident_id,
+                'behavior_log_created': behavior_log_path is not None,
+                'behavior_log_path': behavior_log_path,
+                'bip_enhancement_applied': True,
+                'enhanced_recommendation': enhanced_recommendation,
+                'test_speech': test_speech
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': 'Student not identified from test speech',
+                'test_speech': test_speech
+            })
+            
+    except Exception as e:
+        logger.error(f"Error testing student BIP workflow: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/student_roster')
+def student_roster():
+    """View student roster and BIP information"""
+    try:
+        # Get roster summary
+        summary = student_manager.get_roster_summary()
+        
+        # Get students with BIPs
+        students_with_bips = student_manager.get_all_students_with_bips()
+        
+        return jsonify({
+            'success': True,
+            'summary': summary,
+            'students_with_bips': students_with_bips
+        })
+        
+    except Exception as e:
+        logger.error(f"Error retrieving student roster: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/student_behavior_history/<student_id>')
+def student_behavior_history(student_id):
+    """View behavior history for a specific student"""
+    try:
+        # Get behavior history
+        history = student_manager.get_student_behavior_history(student_id, days_back=30)
+        
+        # Get student info
+        student_info = None
+        students_with_bips = student_manager.get_all_students_with_bips()
+        for student in students_with_bips:
+            if student['student_id'] == student_id:
+                student_info = student
+                break
+        
+        return jsonify({
+            'success': True,
+            'student_id': student_id,
+            'student_info': student_info,
+            'behavior_history': history,
+            'total_incidents': len(history)
+        })
+        
+    except Exception as e:
+        logger.error(f"Error retrieving behavior history for {student_id}: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 @app.route('/voice_capture', methods=['POST'])
 def voice_capture():
     """API endpoint for capturing voice input with context awareness"""
@@ -914,9 +1046,24 @@ def voice_capture():
             setting=setting
         )
         
+        # Enhance analysis with BIP-aware recommendations if student identified
+        if student_info and student_info.get('has_bip', False):
+            if analysis and 'recommendation_text' in analysis:
+                original_recommendation = analysis['recommendation_text']
+                enhanced_recommendation = student_manager.get_bip_enhanced_recommendation(
+                    original_recommendation, student_info
+                )
+                analysis['recommendation_text'] = enhanced_recommendation
+                analysis['bip_enhanced'] = True
+                logger.info(f"Applied BIP enhancement for student {student_info['first_name']} {student_info['last_name']}")
+        
         # Add the analysis results to our response
         result["analysis"]["protocol_id"] = protocol_id
         result["analysis"]["protocol_analysis"] = analysis
+        
+        # Add student information to response
+        if student_info:
+            result["student_info"] = student_info
         
         # Check for crisis and send email alert if needed
         crisis_result = crisis_alert_system.process_behavior_incident(

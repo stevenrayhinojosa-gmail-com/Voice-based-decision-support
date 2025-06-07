@@ -141,6 +141,11 @@
                         <strong>Teacher Support:</strong> <span id="encouragementMessage"></span>
                     </div>
                     
+                    <div id="studentAlert" class="alert alert-warning" style="display: none;">
+                        <i class="fas fa-user-graduate me-2"></i>
+                        <strong>Student Identified:</strong> <span id="studentMessage"></span>
+                    </div>
+                    
                     <div class="mb-3">
                         <h5 class="card-title">Recommended Protocol:</h5>
                         <div id="protocolName" class="alert alert-info"></div>
@@ -479,6 +484,26 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         } else {
             encouragementAlert.style.display = 'none';
+        }
+        
+        // Show student identification and BIP information
+        if (data.student_info) {
+            const student = data.student_info;
+            studentAlert.style.display = 'block';
+            
+            let studentMessage = `<strong>${student.first_name} ${student.last_name}</strong> (ID: ${student.student_id})`;
+            
+            if (student.has_bip) {
+                studentMessage += `<br><span class="badge bg-info">Has BIP</span> ${student.bip_strategy}`;
+                studentAlert.className = 'alert alert-info';
+            } else {
+                studentMessage += `<br><span class="badge bg-secondary">No BIP on file</span>`;
+                studentAlert.className = 'alert alert-warning';
+            }
+            
+            document.getElementById('studentMessage').innerHTML = studentMessage;
+        } else {
+            studentAlert.style.display = 'none';
         }
         
         // Update protocol name
