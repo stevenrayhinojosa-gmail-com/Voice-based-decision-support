@@ -13,6 +13,7 @@ from ml_models import BehavioralDecisionModel
 from voice_recognition import analyze_speech_for_decision, extract_keywords_from_speech
 from advanced_nlp import BehaviorQueryProcessor
 from context_sensors import ContextSensor, context_sensor
+from crisis_alert import crisis_alert_system
 
 # Helper class for JSON serialization of SQLAlchemy objects
 class AlchemyEncoder(json.JSONEncoder):
@@ -693,6 +694,18 @@ def voice_capture():
         # Add the analysis results to our response
         result["analysis"]["protocol_id"] = protocol_id
         result["analysis"]["protocol_analysis"] = analysis
+        
+        # Check for crisis and send SMS alert if needed
+        crisis_result = crisis_alert_system.process_behavior_incident(
+            result["analysis"], 
+            location=setting
+        )
+        
+        # Add crisis alert information to response
+        result["crisis_alert"] = crisis_result
+        
+        if crisis_result["crisis_detected"]:
+            logger.warning(f"Crisis detected and alert {'sent' if crisis_result['alert_sent'] else 'failed'}")
         
         # Return the results using our custom AlchemyEncoder for SQLAlchemy objects
         return app.response_class(
