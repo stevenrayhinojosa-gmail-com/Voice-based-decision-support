@@ -674,6 +674,64 @@ def test_incident_workflow():
         logger.error(f"Error testing incident workflow: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
+@app.route('/feedback/stats')
+def feedback_stats():
+    """View feedback statistics"""
+    stats = feedback_system.get_feedback_stats()
+    recent_feedback = feedback_system.get_recent_feedback(20)
+    
+    return render_template('feedback_stats.html', 
+                         stats=stats, 
+                         recent_feedback=recent_feedback)
+
+@app.route('/test_feedback_workflow', methods=['POST'])
+def test_feedback_workflow():
+    """Test the complete feedback workflow including incident and feedback collection"""
+    try:
+        session_id = "test_feedback_session"
+        
+        # Step 1: Simulate crisis detection and incident report
+        initial_data = {
+            'location': 'classroom',
+            'behavior_description': 'Student with aggressive behavior - testing feedback system',
+            'keywords': ['aggressive', 'testing'],
+            'severity': 'medium',
+            'time_period': 'instructional',
+            'noise_level_db': -50.0,
+            'is_transition': False,
+            'is_crisis': True
+        }
+        
+        incident_id = incident_reporter.start_incident_log(session_id, initial_data)
+        incident_reporter.log_voice_input(session_id, "Testing the feedback system with this incident")
+        incident_reporter.log_recommendation(session_id, "Apply standard de-escalation protocols")
+        
+        # Step 2: End incident and request feedback
+        report_result = incident_reporter.end_incident(session_id, outcome="resolved for testing")
+        
+        # Step 3: Request feedback
+        feedback_request = feedback_system.request_feedback(
+            session_id, 
+            report_result["incident_id"],
+            report_result.get("teacher_email")
+        )
+        
+        # Step 4: Submit positive feedback
+        feedback_result = feedback_system.submit_feedback(session_id, 'thumbs_up')
+        
+        return jsonify({
+            'success': True,
+            'test_completed': True,
+            'incident_id': incident_id,
+            'feedback_requested': feedback_request['success'],
+            'feedback_submitted': feedback_result['success'],
+            'feedback_stats': feedback_system.get_feedback_stats()
+        })
+        
+    except Exception as e:
+        logger.error(f"Error testing feedback workflow: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 @app.route('/voice_capture', methods=['POST'])
 def voice_capture():
     """API endpoint for capturing voice input with context awareness"""
