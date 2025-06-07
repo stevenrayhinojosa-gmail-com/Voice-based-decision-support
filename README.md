@@ -1,8 +1,8 @@
-# Voice-Based Behavioral Decision Support System
+# SereniTeach - Voice-Based Behavioral Decision Support System
 
 ## Overview
 
-This application provides a specialized voice-only interface for teachers and school staff to receive immediate recommendations during behavioral incidents with students. The system uses context-aware decision making that incorporates environmental factors to provide tailored guidance.
+SereniTeach provides a specialized voice-only interface for teachers and school staff to receive immediate recommendations during behavioral incidents with students. The system uses context-aware decision making that incorporates environmental factors to provide tailored guidance.
 
 ## Features
 
@@ -61,4 +61,4 @@ The system considers these contextual elements when providing recommendations:
 
 ---
 
-Created for educational contexts to provide rapid, evidence-based responses to student behavioral situations.
+SereniTeach - Created for educational contexts to provide rapid, evidence-based responses to student behavioral situations.

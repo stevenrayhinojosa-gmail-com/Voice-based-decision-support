@@ -579,8 +579,8 @@ def get_context_data():
 @app.route('/voice_only', methods=['GET'])
 @app.route('/', methods=['GET'])  # Make this the default landing page
 def voice_only():
-    """Voice-only interface for behavioral support - primary interface"""
-    return render_template('voice_only.html', title="Voice-Only Behavioral Support")
+    """SereniTeach voice interface - primary interface"""
+    return render_template('voice_only.html', title="SereniTeach Voice Assistant")
     
 @app.route('/text_input', methods=['GET'])
 def text_input():
