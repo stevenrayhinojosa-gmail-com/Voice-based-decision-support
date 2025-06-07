@@ -17,6 +17,7 @@ from crisis_alert import crisis_alert_system
 from incident_reporting import incident_reporter
 from feedback_system import TeacherFeedbackSystem
 from teacher_encouragement import TeacherEncouragementSystem
+from student_manager import StudentManager
 
 # Helper class for JSON serialization of SQLAlchemy objects
 class AlchemyEncoder(json.JSONEncoder):
@@ -45,6 +46,9 @@ feedback_system = TeacherFeedbackSystem()
 
 # Initialize teacher encouragement system
 encouragement_system = TeacherEncouragementSystem()
+
+# Initialize student management system
+student_manager = StudentManager()
 
 # Remove this route as we now have a direct route to voice_only at '/'
 
@@ -837,6 +841,9 @@ def voice_capture():
                 "message": "Crisis ended. Incident report generated and emailed."
             })
         
+        # Check for student identification in speech
+        student_info = student_manager.identify_student_from_speech(speech_text)
+        
         # Process keywords and emergency detection
         keywords = extract_keywords_from_speech(speech_text)
         
@@ -934,12 +941,23 @@ def voice_capture():
                     'time_period': time_period,
                     'noise_level_db': noise_level,
                     'is_transition': is_transition,
-                    'is_crisis': True
+                    'is_crisis': True,
+                    'student_info': student_info  # Include student information
                 }
                 incident_id = incident_reporter.start_incident_log(session_id, initial_data)
                 result["incident_started"] = True
                 result["incident_id"] = incident_id
                 logger.info(f"Started incident log {incident_id} for crisis")
+                
+                # Create personalized behavior log if student identified
+                if student_info:
+                    behavior_log_path = student_manager.create_behavior_log_entry(
+                        student_info['student_id'], 
+                        initial_data
+                    )
+                    result["behavior_log_created"] = behavior_log_path is not None
+                    result["student_identified"] = True
+                    logger.info(f"Created behavior log for student {student_info['first_name']} {student_info['last_name']}")
                 
                 # Start teacher encouragement system for crisis support
                 encouragement_result = encouragement_system.start_encouragement(session_id, enabled=True)

@@ -1,0 +1,14 @@
+{
+  "students": [
+    {"first_name": "Johnny", "last_name": "Rivera", "student_id": "stu001"},
+    {"first_name": "Ava", "last_name": "Nguyen", "student_id": "stu002"},
+    {"first_name": "Marcus", "last_name": "Thompson", "student_id": "stu003"},
+    {"first_name": "Sofia", "last_name": "Garcia", "student_id": "stu004"},
+    {"first_name": "Ethan", "last_name": "Chen", "student_id": "stu005"},
+    {"first_name": "Maya", "last_name": "Patel", "student_id": "stu006"},
+    {"first_name": "Jayden", "last_name": "Williams", "student_id": "stu007"},
+    {"first_name": "Isabella", "last_name": "Rodriguez", "student_id": "stu008"},
+    {"first_name": "Caleb", "last_name": "Davis", "student_id": "stu009"},
+    {"first_name": "Zoe", "last_name": "Johnson", "student_id": "stu010"}
+  ]
+}

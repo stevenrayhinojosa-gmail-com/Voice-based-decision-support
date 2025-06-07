@@ -1,0 +1,50 @@
+Enhance the application with synthetic student data and behavior intervention plan (BIP) awareness for testing behavior logging during crises.
+
+1. **Create Synthetic Student Roster**
+   - Generate a file `student_roster.json` with 10 synthetic student entries.
+   - Each student entry should include:
+     - `first_name`
+     - `last_name`
+     - `student_id`
+   - Example: 
+     ```json
+     {
+       "students": [
+         {"first_name": "Johnny", "last_name": "Rivera", "student_id": "stu001"},
+         {"first_name": "Ava", "last_name": "Nguyen", "student_id": "stu002"},
+         ...
+       ]
+     }
+     ```
+
+2. **Create BIP Index**
+   - In a separate file `bip_index.json`, define BIPs for exactly **three** of the students from the roster.
+   - Each entry should include:
+     - `student_id`
+     - `support_plan_summary` (e.g., “Requires visual cues and non-verbal de-escalation”)
+   - Example:
+     ```json
+     {
+       "stu001": "Use calm tone and offer movement breaks.",
+       "stu004": "Provide visual choices during outbursts.",
+       "stu007": "Offer 1:1 support when noise level is high."
+     }
+     ```
+
+3. **Update Crisis Handler**
+   - When a student’s name is spoken during a crisis, match it against `student_roster.json`.
+   - If a match is found, retrieve their `student_id`.
+   - Check if the student has a BIP in `bip_index.json`. If so:
+     - Log that the student has a BIP.
+     - Prioritize the associated strategy in the model's recommendation list.
+   - If no match or no BIP, proceed with default logic.
+
+4. **Log Behavior Per Student**
+   - Create a personalized behavior log file under `behavior_logs/` using the student ID and date.
+   - Log all actions, timestamps, recommendations, and whether a BIP was applied.
+
+5. **Data Privacy**
+   - All data must remain local.
+   - Use synthetic names only. Do not access or sync with any real student databases or external APIs.
+
+This feature will simulate per-student tracking and BIP-aware escalation handling in a safe, fully offline test environment.
