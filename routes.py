@@ -16,6 +16,7 @@ from context_sensors import ContextSensor, context_sensor
 from crisis_alert import crisis_alert_system
 from incident_reporting import incident_reporter
 from feedback_system import TeacherFeedbackSystem
+from teacher_encouragement import TeacherEncouragementSystem
 
 # Helper class for JSON serialization of SQLAlchemy objects
 class AlchemyEncoder(json.JSONEncoder):
@@ -41,6 +42,9 @@ logger = logging.getLogger('routes')
 
 # Initialize feedback system
 feedback_system = TeacherFeedbackSystem()
+
+# Initialize teacher encouragement system
+encouragement_system = TeacherEncouragementSystem()
 
 # Remove this route as we now have a direct route to voice_only at '/'
 
@@ -881,6 +885,11 @@ def voice_capture():
                 result["incident_started"] = True
                 result["incident_id"] = incident_id
                 logger.info(f"Started incident log {incident_id} for crisis")
+                
+                # Start teacher encouragement system for crisis support
+                encouragement_result = encouragement_system.start_encouragement(session_id, enabled=True)
+                result["encouragement_started"] = encouragement_result.get("encouragement_started", False)
+                logger.info(f"Started teacher encouragement for crisis session {session_id}")
         
         # Check for "crisis is over" command
         crisis_end_phrases = ['crisis is over', 'crisis over', 'incident is over', 'incident over', 'emergency is over', 'emergency over']
@@ -890,6 +899,12 @@ def voice_capture():
                 report_result = incident_reporter.end_incident(session_id, outcome="teacher declared resolved")
                 result["crisis_ended"] = True
                 result["incident_report"] = report_result
+                
+                # Stop teacher encouragement system
+                if encouragement_system.has_active_encouragement(session_id):
+                    encouragement_stop = encouragement_system.stop_encouragement(session_id)
+                    result["encouragement_stopped"] = encouragement_stop.get("encouragement_stopped", False)
+                    logger.info(f"Stopped teacher encouragement for ended crisis")
                 
                 # Always request feedback after incident report is generated
                 if report_result["success"]:
@@ -908,6 +923,28 @@ def voice_capture():
                     result["message"] = "Crisis ended but report generation failed."
             else:
                 result["message"] = "No active crisis to end."
+        
+        # Check for encouragement toggle commands
+        elif 'turn off encouragement' in speech_text.lower() or 'disable encouragement' in speech_text.lower():
+            if encouragement_system.has_active_encouragement(session_id):
+                toggle_result = encouragement_system.toggle_encouragement(session_id, enable=False)
+                result["encouragement_toggled"] = toggle_result.get("encouragement_toggled", False)
+                result["message"] = toggle_result.get("message", "Encouragement turned off.")
+            else:
+                result["message"] = "No active encouragement to turn off."
+        
+        elif 'turn on encouragement' in speech_text.lower() or 'enable encouragement' in speech_text.lower():
+            if encouragement_system.has_active_encouragement(session_id):
+                toggle_result = encouragement_system.toggle_encouragement(session_id, enable=True)
+                result["encouragement_toggled"] = toggle_result.get("encouragement_toggled", False)
+                result["message"] = toggle_result.get("message", "Encouragement turned on.")
+            elif incident_reporter.has_active_incident(session_id):
+                # Start encouragement if there's an active crisis
+                start_result = encouragement_system.start_encouragement(session_id, enabled=True)
+                result["encouragement_started"] = start_result.get("encouragement_started", False)
+                result["message"] = "Encouragement started for active crisis."
+            else:
+                result["message"] = "No active crisis for encouragement."
         
         # Check for feedback responses
         elif feedback_system.has_pending_feedback(session_id):
@@ -941,6 +978,14 @@ def voice_capture():
             behavior_change_indicators = ['now', 'started', 'stopped', 'began', 'is becoming', 'turned', 'changed']
             if any(indicator in speech_text.lower() for indicator in behavior_change_indicators):
                 incident_reporter.log_behavior_update(session_id, speech_text)
+        
+        # Add encouragement status and latest message to response
+        encouragement_status = encouragement_system.get_encouragement_status(session_id)
+        result["encouragement_status"] = encouragement_status
+        
+        latest_encouragement = encouragement_system.get_latest_encouragement(session_id)
+        if latest_encouragement:
+            result["latest_encouragement"] = latest_encouragement
         
         # Return the results using our custom AlchemyEncoder for SQLAlchemy objects
         return app.response_class(

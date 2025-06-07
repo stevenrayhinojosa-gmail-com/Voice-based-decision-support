@@ -136,6 +136,11 @@
                         <strong>Feedback Request:</strong> <span id="feedbackMessage"></span>
                     </div>
                     
+                    <div id="encouragementAlert" class="alert alert-success" style="display: none;">
+                        <i class="fas fa-heart me-2"></i>
+                        <strong>Teacher Support:</strong> <span id="encouragementMessage"></span>
+                    </div>
+                    
                     <div class="mb-3">
                         <h5 class="card-title">Recommended Protocol:</h5>
                         <div id="protocolName" class="alert alert-info"></div>
@@ -447,6 +452,33 @@ document.addEventListener('DOMContentLoaded', function() {
             feedbackAlert.className = 'alert alert-warning';
         } else if (!data.feedback_request) {
             feedbackAlert.style.display = 'none';
+        }
+        
+        // Show encouragement messages during crises
+        if (data.latest_encouragement) {
+            encouragementAlert.style.display = 'block';
+            encouragementMessage.innerHTML = `
+                <strong>${data.latest_encouragement.message}</strong><br>
+                <small>Encouragement #${data.latest_encouragement.count} - ${new Date(data.latest_encouragement.timestamp).toLocaleTimeString()}</small>
+            `;
+            encouragementAlert.className = 'alert alert-success';
+            
+            // Auto-hide encouragement after 8 seconds
+            setTimeout(() => {
+                encouragementAlert.style.display = 'none';
+            }, 8000);
+        } else if (data.encouragement_status && data.encouragement_status.active) {
+            // Show encouragement status if active but no recent message
+            if (data.encouragement_status.enabled) {
+                encouragementAlert.style.display = 'block';
+                encouragementMessage.innerHTML = `
+                    <strong>Teacher support active</strong><br>
+                    <small>Encouraging messages every 50 seconds - Say "turn off encouragement" to disable</small>
+                `;
+                encouragementAlert.className = 'alert alert-info';
+            }
+        } else {
+            encouragementAlert.style.display = 'none';
         }
         
         // Update protocol name
