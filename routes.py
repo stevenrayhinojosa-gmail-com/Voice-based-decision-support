@@ -736,6 +736,61 @@ def test_feedback_workflow():
         logger.error(f"Error testing feedback workflow: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
+@app.route('/test_encouragement_workflow', methods=['POST'])
+def test_encouragement_workflow():
+    """Test the complete teacher encouragement system during crisis scenarios"""
+    try:
+        session_id = "test_encouragement_session"
+        
+        # Step 1: Start a crisis incident with encouragement
+        initial_data = {
+            'location': 'classroom',
+            'behavior_description': 'Student displaying escalating aggressive behavior - testing encouragement',
+            'keywords': ['aggressive', 'escalating'],
+            'severity': 'high',
+            'time_period': 'instructional',
+            'noise_level_db': -45.0,
+            'is_transition': False,
+            'is_crisis': True
+        }
+        
+        incident_id = incident_reporter.start_incident_log(session_id, initial_data)
+        
+        # Step 2: Start teacher encouragement system
+        encouragement_result = encouragement_system.start_encouragement(session_id, enabled=True)
+        
+        # Step 3: Simulate some time passing with encouragement messages
+        import time
+        time.sleep(2)  # Brief pause to simulate encouragement cycle
+        
+        # Step 4: Get encouragement status
+        encouragement_status = encouragement_system.get_encouragement_status(session_id)
+        
+        # Step 5: Test toggling encouragement off and on
+        toggle_off = encouragement_system.toggle_encouragement(session_id, enable=False)
+        toggle_on = encouragement_system.toggle_encouragement(session_id, enable=True)
+        
+        # Step 6: End the crisis and stop encouragement
+        report_result = incident_reporter.end_incident(session_id, outcome="successfully de-escalated")
+        encouragement_stop = encouragement_system.stop_encouragement(session_id)
+        
+        return jsonify({
+            'success': True,
+            'test_completed': True,
+            'incident_id': incident_id,
+            'encouragement_started': encouragement_result.get('encouragement_started', False),
+            'encouragement_status': encouragement_status,
+            'toggle_off_success': toggle_off.get('encouragement_toggled', False),
+            'toggle_on_success': toggle_on.get('encouragement_toggled', False),
+            'encouragement_stopped': encouragement_stop.get('encouragement_stopped', False),
+            'total_encouragements': encouragement_stop.get('total_encouragements', 0),
+            'duration_seconds': encouragement_stop.get('duration_seconds', 0)
+        })
+        
+    except Exception as e:
+        logger.error(f"Error testing encouragement workflow: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 @app.route('/voice_capture', methods=['POST'])
 def voice_capture():
     """API endpoint for capturing voice input with context awareness"""
