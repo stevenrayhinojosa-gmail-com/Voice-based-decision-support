@@ -927,6 +927,11 @@ def student_behavior_history(student_id):
         logger.error(f"Error retrieving behavior history for {student_id}: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
+@app.route('/student_dashboard')
+def student_dashboard():
+    """Student management dashboard with BIP awareness"""
+    return render_template('student_dashboard.html')
+
 @app.route('/voice_capture', methods=['POST'])
 def voice_capture():
     """API endpoint for capturing voice input with context awareness"""
