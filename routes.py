@@ -1288,3 +1288,175 @@ def voice_capture():
             "success": False,
             "error": str(e)
         })
+
+@app.route('/generate_test_data')
+def generate_test_data():
+    """Generate synthetic behavioral data for testing trend visualizations"""
+    try:
+        import random
+        from datetime import timedelta
+        
+        # Ensure behavior_logs directory exists
+        if not os.path.exists('behavior_logs'):
+            os.makedirs('behavior_logs')
+        
+        # Get student roster
+        students = student_manager.get_all_students()
+        
+        # Behavior patterns for realistic data
+        behavior_types = {
+            'disruption': ['talking', 'noise', 'interrupting', 'calling out'],
+            'defiance': ['refusing', 'arguing', 'non-compliance'],
+            'aggression': ['hitting', 'throwing', 'yelling', 'pushing'],
+            'off-task': ['wandering', 'distracted', 'daydreaming'],
+            'social': ['teasing', 'inappropriate comments', 'exclusion']
+        }
+        
+        severity_levels = ['low', 'medium', 'high']
+        locations = ['classroom', 'hallway', 'cafeteria', 'playground']
+        outcomes = [
+            'Crisis resolved successfully with de-escalation',
+            'Student responded well to intervention',
+            'Situation required additional support',
+            'Crisis ended with student calming down'
+        ]
+        
+        # Generate 15-20 incidents across the past 2 weeks
+        base_date = datetime.now() - timedelta(days=14)
+        generated_files = []
+        
+        for i in range(18):
+            # Select random student (some more likely than others for realistic patterns)
+            student_weights = [3 if s.get('has_bip') else 1 for s in students]
+            student = random.choices(students, weights=student_weights)[0]
+            
+            # Generate incident time (more likely during school hours)
+            days_offset = random.randint(0, 13)
+            hour = random.choices(
+                range(8, 16),  # School hours 8 AM to 4 PM
+                weights=[1, 2, 3, 4, 3, 2, 2, 1]  # Peak around 11 AM - 1 PM
+            )[0]
+            minute = random.randint(0, 59)
+            
+            incident_time = base_date + timedelta(days=days_offset, hours=hour, minutes=minute)
+            
+            # Generate behavior data
+            behavior_category = random.choice(list(behavior_types.keys()))
+            keywords = random.sample(behavior_types[behavior_category], random.randint(1, 2))
+            
+            severity = random.choices(
+                severity_levels,
+                weights=[4, 3, 1]  # More low/medium severity
+            )[0]
+            
+            # Generate environmental data
+            noise_level = random.uniform(-80, -50)  # dB range
+            if hour in [11, 12, 13]:  # Lunch time - noisier
+                noise_level += 10
+            
+            location = random.choice(locations)
+            is_transition = random.random() < 0.2  # 20% during transitions
+            
+            # Create behavior log entry
+            log_entry = {
+                'incident_id': f'test_{i+1:03d}',
+                'session_id': f'session_test_{i+1}',
+                'student_id': student['student_id'],
+                'has_bip': student.get('has_bip', False),
+                'incident_time': incident_time.isoformat(),
+                'end_time': (incident_time + timedelta(minutes=random.randint(5, 25))).isoformat(),
+                'location': location,
+                'outcome': random.choice(outcomes),
+                'incident_data': {
+                    'behavior_description': f"{behavior_category.title()} behavior involving {', '.join(keywords)}",
+                    'keywords': keywords,
+                    'severity': severity,
+                    'noise_level_db': round(noise_level, 2),
+                    'time_period': f"Period {random.randint(1, 7)}",
+                    'is_transition': is_transition,
+                    'location': location
+                }
+            }
+            
+            # Save to individual student file
+            filename = f"{student['student_id']}_behavior_{incident_time.strftime('%Y%m%d_%H%M%S')}.json"
+            filepath = os.path.join('behavior_logs', filename)
+            
+            with open(filepath, 'w') as f:
+                json.dump(log_entry, f, indent=2)
+            
+            generated_files.append(filename)
+        
+        return jsonify({
+            'success': True,
+            'message': f'Generated {len(generated_files)} test behavior incidents',
+            'files_created': len(generated_files),
+            'data_summary': {
+                'incidents': len(generated_files),
+                'students_involved': len(set([log_entry['student_id'] for _ in range(18)])),
+                'date_range': f"{base_date.strftime('%Y-%m-%d')} to {datetime.now().strftime('%Y-%m-%d')}",
+                'patterns': 'Students with BIPs have more incidents, peak during lunch hours'
+            }
+        })
+        
+    except Exception as e:
+        logger.error(f"Error generating test data: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/test_analytics')
+def test_analytics():
+    """Test route for behavior analytics and visualization generation"""
+    try:
+        from behavior_analytics import BehaviorAnalytics
+        
+        analytics = BehaviorAnalytics()
+        
+        # Generate visualizations for all students
+        result = analytics.generate_all_visualizations()
+        
+        return jsonify({
+            'success': result['success'],
+            'data_available': result['data_available'],
+            'charts_generated': len(result.get('chart_paths', [])),
+            'summary': result.get('summary', {}),
+            'student_specific': result['student_specific'],
+            'chart_files': [os.path.basename(path) for path in result.get('chart_paths', [])]
+        })
+        
+    except Exception as e:
+        logger.error(f"Error testing analytics: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/test_analytics/<student_id>')
+def test_student_analytics(student_id):
+    """Test route for student-specific behavior analytics"""
+    try:
+        from behavior_analytics import BehaviorAnalytics
+        
+        analytics = BehaviorAnalytics()
+        
+        # Generate visualizations for specific student
+        result = analytics.generate_all_visualizations(student_id)
+        
+        return jsonify({
+            'success': result['success'],
+            'student_id': student_id,
+            'data_available': result['data_available'],
+            'charts_generated': len(result.get('chart_paths', [])),
+            'summary': result.get('summary', {}),
+            'student_specific': result['student_specific'],
+            'chart_files': [os.path.basename(path) for path in result.get('chart_paths', [])]
+        })
+        
+    except Exception as e:
+        logger.error(f"Error testing student analytics: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
