@@ -14,6 +14,7 @@ from voice_recognition import analyze_speech_for_decision, extract_keywords_from
 from advanced_nlp import BehaviorQueryProcessor
 from context_sensors import ContextSensor, context_sensor
 from crisis_alert import crisis_alert_system
+from incident_reporting import incident_reporter
 
 # Helper class for JSON serialization of SQLAlchemy objects
 class AlchemyEncoder(json.JSONEncoder):
@@ -646,6 +647,30 @@ def voice_capture():
         # Log the context data
         logger.info(f"Context data during voice input: Time: {time_period}, Noise: {noise_level}dB, Is Transition: {is_transition}")
         
+        # Check for "crisis is over" command
+        crisis_over_phrases = ['crisis is over', 'crisis over', 'incident is over', 'incident over', 'situation resolved']
+        is_crisis_end = any(phrase in speech_text.lower() for phrase in crisis_over_phrases)
+        
+        # Get session ID for incident tracking
+        session_id = session.get('session_id', 'default_session')
+        
+        # Handle end of crisis
+        if is_crisis_end and incident_reporter.has_active_incident(session_id):
+            # End the incident and generate report
+            report_result = incident_reporter.end_incident(session_id, outcome="resolved")
+            
+            return jsonify({
+                "success": True,
+                "crisis_ended": True,
+                "incident_report": {
+                    "generated": report_result["success"],
+                    "email_sent": report_result.get("email_sent", False),
+                    "filename": report_result.get("report_filename"),
+                    "incident_id": report_result.get("incident_id")
+                },
+                "message": "Crisis ended. Incident report generated and emailed."
+            })
+        
         # Process keywords and emergency detection
         keywords = extract_keywords_from_speech(speech_text)
         
@@ -720,7 +745,7 @@ def voice_capture():
         result["analysis"]["protocol_id"] = protocol_id
         result["analysis"]["protocol_analysis"] = analysis
         
-        # Check for crisis and send SMS alert if needed
+        # Check for crisis and send email alert if needed
         crisis_result = crisis_alert_system.process_behavior_incident(
             result["analysis"], 
             location=setting
@@ -729,8 +754,41 @@ def voice_capture():
         # Add crisis alert information to response
         result["crisis_alert"] = crisis_result
         
+        # Handle incident reporting
         if crisis_result["crisis_detected"]:
             logger.warning(f"Crisis detected and alert {'sent' if crisis_result['alert_sent'] else 'failed'}")
+            
+            # Start incident log if this is a new crisis
+            if not incident_reporter.has_active_incident(session_id):
+                initial_data = {
+                    'location': setting,
+                    'behavior_description': speech_text,
+                    'keywords': keywords,
+                    'severity': 'high' if is_emergency else 'medium',
+                    'time_period': time_period,
+                    'noise_level_db': noise_level,
+                    'is_transition': is_transition,
+                    'is_crisis': True
+                }
+                incident_id = incident_reporter.start_incident_log(session_id, initial_data)
+                result["incident_started"] = True
+                result["incident_id"] = incident_id
+                logger.info(f"Started incident log {incident_id} for crisis")
+        
+        # Log this interaction if there's an active incident
+        if incident_reporter.has_active_incident(session_id):
+            incident_reporter.log_voice_input(session_id, speech_text)
+            
+            # Log any recommendations provided
+            if analysis and 'recommendation' in analysis:
+                recommendation_text = analysis.get('recommendation', '')
+                if recommendation_text:
+                    incident_reporter.log_recommendation(session_id, recommendation_text)
+            
+            # Log behavior updates if this describes a change in behavior
+            behavior_change_indicators = ['now', 'started', 'stopped', 'began', 'is becoming', 'turned', 'changed']
+            if any(indicator in speech_text.lower() for indicator in behavior_change_indicators):
+                incident_reporter.log_behavior_update(session_id, speech_text)
         
         # Return the results using our custom AlchemyEncoder for SQLAlchemy objects
         return app.response_class(

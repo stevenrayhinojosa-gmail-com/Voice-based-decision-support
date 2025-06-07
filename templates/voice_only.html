@@ -126,6 +126,11 @@
                         <strong>Crisis Alert Sent:</strong> <span id="crisisAlertMessage"></span>
                     </div>
                     
+                    <div id="incidentAlert" class="alert alert-info" style="display: none;">
+                        <i class="fas fa-clipboard-list me-2"></i>
+                        <strong>Incident Logging:</strong> <span id="incidentMessage"></span>
+                    </div>
+                    
                     <div class="mb-3">
                         <h5 class="card-title">Recommended Protocol:</h5>
                         <div id="protocolName" class="alert alert-info"></div>
@@ -204,6 +209,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const emergencyAlert = document.getElementById('emergencyAlert');
     const crisisAlert = document.getElementById('crisisAlert');
     const crisisAlertMessage = document.getElementById('crisisAlertMessage');
+    const incidentAlert = document.getElementById('incidentAlert');
+    const incidentMessage = document.getElementById('incidentMessage');
     const protocolName = document.getElementById('protocolName');
     const contextNoteSection = document.getElementById('contextNoteSection');
     const contextNote = document.getElementById('contextNote');
