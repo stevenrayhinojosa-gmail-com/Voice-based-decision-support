@@ -891,15 +891,19 @@ def voice_capture():
                 result["crisis_ended"] = True
                 result["incident_report"] = report_result
                 
-                # Request feedback after incident report is sent
-                if report_result["success"] and report_result["email_sent"]:
+                # Always request feedback after incident report is generated
+                if report_result["success"]:
                     feedback_request = feedback_system.request_feedback(
                         session_id, 
                         report_result["incident_id"],
-                        report_result.get("teacher_email")
+                        report_result.get("teacher_email", "stevenrayhinojosa@gmail.com")
                     )
                     result["feedback_request"] = feedback_request
-                    result["message"] = "Crisis ended. Incident report generated and emailed. " + feedback_request.get("message", "")
+                    
+                    if report_result["email_sent"]:
+                        result["message"] = "Crisis ended. Incident report generated and emailed. " + feedback_request.get("message", "")
+                    else:
+                        result["message"] = "Crisis ended. Incident report generated but email failed. " + feedback_request.get("message", "")
                 else:
                     result["message"] = "Crisis ended but report generation failed."
             else:
