@@ -381,10 +381,10 @@ document.addEventListener('DOMContentLoaded', function() {
         if (data.crisis_alert && data.crisis_alert.crisis_detected) {
             crisisAlert.style.display = 'block';
             if (data.crisis_alert.alert_sent) {
-                crisisAlertMessage.textContent = 'SMS alert sent to front desk (279-200-0303)';
+                crisisAlertMessage.textContent = 'Email alert sent to front desk (stevenrayhinojosa@gmail.com)';
                 crisisAlert.className = 'alert alert-success';
             } else {
-                crisisAlertMessage.textContent = 'Crisis detected but SMS alert failed to send';
+                crisisAlertMessage.textContent = 'Crisis detected but email alert failed to send';
                 crisisAlert.className = 'alert alert-danger';
             }
         } else {
