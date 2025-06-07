@@ -377,6 +377,20 @@ document.addEventListener('DOMContentLoaded', function() {
             emergencyAlert.style.display = 'none';
         }
         
+        // Show crisis alert if SMS was sent
+        if (data.crisis_alert && data.crisis_alert.crisis_detected) {
+            crisisAlert.style.display = 'block';
+            if (data.crisis_alert.alert_sent) {
+                crisisAlertMessage.textContent = 'SMS alert sent to front desk (279-200-0303)';
+                crisisAlert.className = 'alert alert-success';
+            } else {
+                crisisAlertMessage.textContent = 'Crisis detected but SMS alert failed to send';
+                crisisAlert.className = 'alert alert-danger';
+            }
+        } else {
+            crisisAlert.style.display = 'none';
+        }
+        
         // Update protocol name
         if (data.analysis && data.analysis.protocol_id) {
             if (data.analysis.protocol_analysis && data.analysis.protocol_analysis.selected_option) {

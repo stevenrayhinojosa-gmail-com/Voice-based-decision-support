@@ -599,6 +599,31 @@ def api_context_data():
         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/voice_capture', methods=['POST'])
+@app.route('/test_crisis_alert', methods=['POST'])
+def test_crisis_alert():
+    """Test route for crisis alert system"""
+    try:
+        # Create test crisis data
+        test_data = {
+            'keywords': ['emergency', 'dangerous', 'weapon'],
+            'is_emergency': True,
+            'severity': 'high',
+            'behavior_type': 'violent behavior'
+        }
+        
+        # Test the crisis alert system
+        crisis_result = crisis_alert_system.process_behavior_incident(test_data, location="test classroom")
+        
+        return jsonify({
+            'success': True,
+            'crisis_detected': crisis_result['crisis_detected'],
+            'alert_sent': crisis_result['alert_sent'],
+            'details': crisis_result['alert_details']
+        })
+    except Exception as e:
+        logger.error(f"Error testing crisis alert: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 @app.route('/voice_capture', methods=['POST'])
 def voice_capture():
     """API endpoint for capturing voice input with context awareness"""
