@@ -625,6 +625,51 @@ def test_crisis_alert():
         logger.error(f"Error testing crisis alert: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
+@app.route('/test_incident_workflow', methods=['POST'])
+def test_incident_workflow():
+    """Test the complete incident reporting workflow"""
+    try:
+        session_id = "test_session_workflow"
+        
+        # Step 1: Start a crisis incident
+        initial_data = {
+            'location': 'test classroom',
+            'behavior_description': 'Student showing aggressive behavior with dangerous object',
+            'keywords': ['aggressive', 'dangerous', 'weapon'],
+            'severity': 'high',
+            'time_period': 'instructional',
+            'noise_level_db': -45.0,
+            'is_transition': False,
+            'is_crisis': True
+        }
+        
+        incident_id = incident_reporter.start_incident_log(session_id, initial_data)
+        
+        # Step 2: Log some interactions during the incident
+        incident_reporter.log_voice_input(session_id, "The student is now throwing chairs")
+        incident_reporter.log_behavior_update(session_id, "Student escalated to throwing furniture")
+        incident_reporter.log_recommendation(session_id, "Remove other students from the area immediately")
+        incident_reporter.log_voice_input(session_id, "Student has calmed down slightly")
+        incident_reporter.log_recommendation(session_id, "Use de-escalation techniques, speak calmly")
+        incident_reporter.log_behavior_update(session_id, "Student is now sitting but still agitated")
+        
+        # Step 3: End the incident and generate report
+        report_result = incident_reporter.end_incident(session_id, outcome="de-escalated successfully")
+        
+        return jsonify({
+            'success': True,
+            'workflow_completed': True,
+            'incident_id': incident_id,
+            'report_generated': report_result['success'],
+            'email_sent': report_result.get('email_sent', False),
+            'report_filename': report_result.get('report_filename'),
+            'report_preview': report_result.get('report_text', '')[:500] + '...' if report_result.get('report_text') else None
+        })
+        
+    except Exception as e:
+        logger.error(f"Error testing incident workflow: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 @app.route('/voice_capture', methods=['POST'])
 def voice_capture():
     """API endpoint for capturing voice input with context awareness"""

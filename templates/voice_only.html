@@ -398,6 +398,24 @@ document.addEventListener('DOMContentLoaded', function() {
             crisisAlert.style.display = 'none';
         }
         
+        // Show incident reporting status
+        if (data.incident_started) {
+            incidentAlert.style.display = 'block';
+            incidentMessage.textContent = `Incident log started (ID: ${data.incident_id})`;
+            incidentAlert.className = 'alert alert-info';
+        } else if (data.crisis_ended) {
+            incidentAlert.style.display = 'block';
+            if (data.incident_report && data.incident_report.generated) {
+                incidentMessage.textContent = `Incident report generated and ${data.incident_report.email_sent ? 'emailed' : 'saved locally'}`;
+                incidentAlert.className = 'alert alert-success';
+            } else {
+                incidentMessage.textContent = 'Crisis ended';
+                incidentAlert.className = 'alert alert-warning';
+            }
+        } else {
+            incidentAlert.style.display = 'none';
+        }
+        
         // Update protocol name
         if (data.analysis && data.analysis.protocol_id) {
             if (data.analysis.protocol_analysis && data.analysis.protocol_analysis.selected_option) {
