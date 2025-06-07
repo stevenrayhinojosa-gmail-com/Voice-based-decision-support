@@ -8,6 +8,7 @@ import logging
 from datetime import datetime
 from flask_mail import Message
 from flask import current_app
+from behavior_analytics import BehaviorAnalytics
 
 logger = logging.getLogger(__name__)
 
@@ -16,6 +17,7 @@ class IncidentReporter:
     
     def __init__(self):
         self.active_incidents = {}  # Dictionary to store active incident logs by session
+        self.analytics = BehaviorAnalytics()  # Initialize analytics module
         logger.info("Incident reporting system initialized")
     
     def start_incident_log(self, session_id, initial_data):
@@ -269,7 +271,7 @@ INITIAL SITUATION:
     
     def _send_report_email(self, incident_log, report_text):
         """
-        Send the incident report via email
+        Send the incident report via email with trend visualizations
         
         Parameters:
         - incident_log: Incident log dictionary
@@ -283,6 +285,13 @@ INITIAL SITUATION:
             date_str = incident_log["start_timestamp"].strftime("%B %d, %Y")
             subject = f"Behavior Incident Report - {incident_log['location'].title()} - {date_str}"
             
+            # Generate trend visualizations
+            student_id = None
+            if 'student_info' in incident_log and incident_log['student_info']:
+                student_id = incident_log['student_info']['student_id']
+            
+            analytics_result = self.analytics.generate_all_visualizations(student_id)
+            
             # Get email configuration
             mail_username = current_app.config.get('MAIL_USERNAME')
             teacher_email = "stevenrayhinojosa@gmail.com"  # Default teacher email
@@ -294,25 +303,85 @@ INITIAL SITUATION:
                     "error": "Email service not configured"
                 }
             
+            # Enhance email body with analytics summary
+            enhanced_body = report_text
+            
+            if analytics_result['success'] and analytics_result['data_available']:
+                enhanced_body += "\n" + "="*60 + "\n"
+                enhanced_body += "BEHAVIOR TREND ANALYSIS & PROACTIVE PLANNING\n"
+                enhanced_body += "="*60 + "\n\n"
+                
+                summary = analytics_result['summary']
+                enhanced_body += f"Analysis Period: {summary.get('date_range', 'N/A')}\n"
+                
+                if analytics_result['student_specific']:
+                    enhanced_body += "INDIVIDUAL STUDENT ANALYSIS:\n"
+                else:
+                    enhanced_body += "CLASS-WIDE BEHAVIOR PATTERNS:\n"
+                
+                for insight in summary.get('insights', []):
+                    enhanced_body += f"• {insight}\n"
+                
+                enhanced_body += "\nPROACTIVE RECOMMENDATIONS:\n"
+                enhanced_body += "• Review attached visualizations to identify behavior patterns\n"
+                enhanced_body += "• Consider environmental modifications during peak incident times\n"
+                enhanced_body += "• Implement preventive strategies based on trend analysis\n"
+                enhanced_body += "• Monitor noise levels during transition periods\n"
+                
+                if analytics_result['student_specific']:
+                    enhanced_body += "• Review individual BIP strategies for effectiveness\n"
+                else:
+                    enhanced_body += "• Consider class-wide behavioral support strategies\n"
+                
+                enhanced_body += "\nATTACHED VISUALIZATIONS:\n"
+                enhanced_body += "1. Behavior Frequency Chart - Shows most common behavior patterns\n"
+                enhanced_body += "2. Time Pattern Heatmap - Reveals peak incident times for planning\n"
+                enhanced_body += "3. Environmental Analysis - Correlates noise levels with escalation\n"
+            else:
+                enhanced_body += "\n" + "="*60 + "\n"
+                enhanced_body += "TREND ANALYSIS NOTE\n"
+                enhanced_body += "="*60 + "\n"
+                enhanced_body += "Insufficient historical data for trend analysis.\n"
+                enhanced_body += "Visualizations will be available after more incidents are logged.\n"
+            
             # Create email message
             msg = Message(
                 subject=subject,
                 sender=mail_username,
                 recipients=[teacher_email],
-                body=report_text
+                body=enhanced_body
             )
+            
+            # Attach trend visualization charts if available
+            if analytics_result['success'] and analytics_result['chart_paths']:
+                for chart_path in analytics_result['chart_paths']:
+                    if os.path.exists(chart_path):
+                        with open(chart_path, 'rb') as f:
+                            chart_filename = os.path.basename(chart_path)
+                            msg.attach(
+                                filename=chart_filename,
+                                content_type='image/png',
+                                data=f.read()
+                            )
+                        logger.info(f"Attached visualization: {chart_filename}")
             
             # Send email using Flask-Mail
             mail = current_app.extensions.get('mail')
             if mail:
                 mail.send(msg)
-                logger.info(f"Incident report emailed successfully to {teacher_email}")
+                logger.info(f"Incident report with visualizations emailed successfully to {teacher_email}")
+                
+                # Clean up chart files after sending
+                if analytics_result['success'] and analytics_result['chart_paths']:
+                    self.analytics.cleanup_charts()
                 
                 return {
                     "success": True,
-                    "message": "Incident report sent successfully",
+                    "message": "Incident report with trend analysis sent successfully",
                     "recipient": teacher_email,
-                    "subject": subject
+                    "subject": subject,
+                    "charts_attached": len(analytics_result.get('chart_paths', [])),
+                    "analytics_included": analytics_result['success']
                 }
             else:
                 logger.error("Mail service not initialized")
