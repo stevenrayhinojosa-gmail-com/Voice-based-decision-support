@@ -416,6 +416,34 @@ document.addEventListener('DOMContentLoaded', function() {
             incidentAlert.style.display = 'none';
         }
         
+        // Show feedback request after incident report
+        if (data.feedback_request && data.feedback_request.feedback_requested) {
+            feedbackAlert.style.display = 'block';
+            feedbackMessage.innerHTML = `
+                <strong>${data.feedback_request.message}</strong><br>
+                <small>Say "thumbs up" if helpful or "thumbs down" if not helpful</small>
+            `;
+            feedbackAlert.className = 'alert alert-primary';
+        } else if (data.feedback_submitted) {
+            feedbackAlert.style.display = 'block';
+            feedbackMessage.textContent = data.feedback_submitted.message || 'Feedback recorded';
+            feedbackAlert.className = 'alert alert-success';
+            
+            // Hide feedback alert after 5 seconds
+            setTimeout(() => {
+                feedbackAlert.style.display = 'none';
+            }, 5000);
+        } else if (data.ask_for_comment) {
+            feedbackAlert.style.display = 'block';
+            feedbackMessage.innerHTML = `
+                <strong>${data.message}</strong><br>
+                <small>Say "comment" followed by your feedback, or just say "no comment"</small>
+            `;
+            feedbackAlert.className = 'alert alert-warning';
+        } else if (!data.feedback_request) {
+            feedbackAlert.style.display = 'none';
+        }
+        
         // Update protocol name
         if (data.analysis && data.analysis.protocol_id) {
             if (data.analysis.protocol_analysis && data.analysis.protocol_analysis.selected_option) {

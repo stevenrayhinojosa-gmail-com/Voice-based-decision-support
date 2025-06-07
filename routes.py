@@ -15,6 +15,7 @@ from advanced_nlp import BehaviorQueryProcessor
 from context_sensors import ContextSensor, context_sensor
 from crisis_alert import crisis_alert_system
 from incident_reporting import incident_reporter
+from feedback_system import TeacherFeedbackSystem
 
 # Helper class for JSON serialization of SQLAlchemy objects
 class AlchemyEncoder(json.JSONEncoder):
@@ -37,6 +38,9 @@ class AlchemyEncoder(json.JSONEncoder):
 # Set up logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger('routes')
+
+# Initialize feedback system
+feedback_system = TeacherFeedbackSystem()
 
 # Remove this route as we now have a direct route to voice_only at '/'
 
@@ -820,8 +824,49 @@ def voice_capture():
                 result["incident_id"] = incident_id
                 logger.info(f"Started incident log {incident_id} for crisis")
         
+        # Check for "crisis is over" command
+        crisis_end_phrases = ['crisis is over', 'crisis over', 'incident is over', 'incident over', 'emergency is over', 'emergency over']
+        if any(phrase in speech_text.lower() for phrase in crisis_end_phrases):
+            if incident_reporter.has_active_incident(session_id):
+                # End the incident and generate report
+                report_result = incident_reporter.end_incident(session_id, outcome="teacher declared resolved")
+                result["crisis_ended"] = True
+                result["incident_report"] = report_result
+                
+                # Request feedback after incident report is sent
+                if report_result["success"] and report_result["email_sent"]:
+                    feedback_request = feedback_system.request_feedback(
+                        session_id, 
+                        report_result["incident_id"],
+                        report_result.get("teacher_email")
+                    )
+                    result["feedback_request"] = feedback_request
+                    result["message"] = "Crisis ended. Incident report generated and emailed. " + feedback_request.get("message", "")
+                else:
+                    result["message"] = "Crisis ended but report generation failed."
+            else:
+                result["message"] = "No active crisis to end."
+        
+        # Check for feedback responses
+        elif feedback_system.has_pending_feedback(session_id):
+            if 'thumbs up' in speech_text.lower() or 'positive' in speech_text.lower() or 'helpful' in speech_text.lower():
+                feedback_result = feedback_system.submit_feedback(session_id, 'thumbs_up')
+                result["feedback_submitted"] = feedback_result
+                result["message"] = feedback_result.get("message", "Feedback recorded.")
+            elif 'thumbs down' in speech_text.lower() or 'negative' in speech_text.lower() or 'not helpful' in speech_text.lower():
+                # Ask for optional comment
+                result["feedback_type"] = "negative"
+                result["ask_for_comment"] = True
+                result["message"] = "Would you like to leave a quick comment about what didn't work?"
+            elif 'comment' in speech_text.lower() and len(speech_text.split()) > 2:
+                # Extract comment (remove the word "comment" and submit feedback)
+                comment_text = speech_text.replace('comment', '').strip()
+                feedback_result = feedback_system.submit_feedback(session_id, 'thumbs_down', comment_text)
+                result["feedback_submitted"] = feedback_result
+                result["message"] = feedback_result.get("message", "Feedback and comment recorded.")
+        
         # Log this interaction if there's an active incident
-        if incident_reporter.has_active_incident(session_id):
+        elif incident_reporter.has_active_incident(session_id):
             incident_reporter.log_voice_input(session_id, speech_text)
             
             # Log any recommendations provided

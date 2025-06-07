@@ -150,7 +150,9 @@ class IncidentReporter:
             "report_filename": report_filename,
             "email_sent": email_result["success"],
             "email_details": email_result,
-            "report_text": report_text
+            "report_text": report_text,
+            "feedback_ready": True,
+            "teacher_email": "stevenrayhinojosa@gmail.com"
         }
     
     def _format_incident_report(self, incident_log):
