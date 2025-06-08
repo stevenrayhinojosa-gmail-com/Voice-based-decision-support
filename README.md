@@ -59,6 +59,25 @@ The system considers these contextual elements when providing recommendations:
 - No personally identifiable student information is recorded
 - Speech data is processed locally and not retained after analysis
 
+## Model Versions
+
+- ✅ **Version 2.0** (Current Stable)
+  - Released: 2025-06-08
+  - Summary: Advanced AI-powered behavioral decision support with voice interface, multilingual support (EN/ES), BIP integration, PostgreSQL database, crisis alerts, behavior analytics, inference testing validation, and comprehensive incident reporting system.
+  - Features: Voice clarification, context sensors, teacher encouragement, student management, database migration, feedback collection
+  - Inference Test Pass Rate: 53% (15 test scenarios)
+  - Technical Stack: Python Flask, PostgreSQL, NLTK, scikit-learn, Speech Recognition
+
+- 🧪 Version 1.0
+  - Early prototype with basic decision tree logic
+  - CSV-based data storage
+  - Limited behavioral pattern recognition
+
+## Version Archive
+
+All stable releases are archived in `versions/` directory:
+- `versions/v2_0_release/` - Complete Version 2.0 codebase and assets
+
 ---
 
 SereniTeach - Created for educational contexts to provide rapid, evidence-based responses to student behavioral situations.

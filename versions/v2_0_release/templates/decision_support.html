@@ -1,0 +1,79 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <h1 class="mb-3">Behavioral Decision Support</h1>
+        <p class="lead">Apply structured protocols to guide behavioral interventions and responses</p>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6 offset-md-3 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-sitemap me-2"></i> Select Protocol</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('decision_support') }}">
+                    {{ form.hidden_tag() }}
+                    
+                    <div class="mb-4">
+                        <label for="protocol_id" class="form-label">{{ form.protocol_id.label }}</label>
+                        {{ form.protocol_id(class="form-select" + (" is-invalid" if form.protocol_id.errors else "")) }}
+                        {% for error in form.protocol_id.errors %}
+                        <div class="invalid-feedback">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                    
+                    <div class="alert alert-info mb-4">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Select a protocol to begin the decision support process. The system will guide you through a series of questions to arrive at a recommended action.
+                    </div>
+                    
+                    {{ form.submit(class="btn btn-primary w-100") }}
+                </form>
+            </div>
+        </div>
+        
+        <!-- Decision Support Info -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-lightbulb me-2"></i> About Decision Support</h5>
+            </div>
+            <div class="card-body">
+                <p>
+                    The behavioral decision support system helps you:
+                </p>
+                <ul>
+                    <li>Follow consistent, evidence-based protocols</li>
+                    <li>Document the decision process for accountability</li>
+                    <li>Reduce decision fatigue in complex situations</li>
+                    <li>Apply best practices to behavioral scenarios</li>
+                </ul>
+                
+                <div class="alert alert-secondary mt-3">
+                    <div class="d-flex align-items-center">
+                        <div class="me-3">
+                            <i class="fas fa-brain" style="font-size: 2rem;"></i>
+                        </div>
+                        <div>
+                            <strong>Two ways to get recommendations:</strong>
+                            <ul class="mb-0 mt-1">
+                                <li>Protocol-based: Follow structured decision trees</li>
+                                <li>ML-based: Use predictions from trained models</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="text-center mt-3">
+                    <a href="{{ url_for('predict') }}" class="btn btn-outline-info">
+                        <i class="fas fa-chart-line me-1"></i> Try ML-Based Prediction
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

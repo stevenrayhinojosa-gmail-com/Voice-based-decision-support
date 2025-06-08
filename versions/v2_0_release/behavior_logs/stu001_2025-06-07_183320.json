@@ -1,0 +1,38 @@
+{
+  "student_id": "stu001",
+  "incident_date": "2025-06-07",
+  "incident_time": "2025-06-07T18:33:20.276916",
+  "has_bip": true,
+  "bip_strategy_applied": "Use calm tone and offer movement breaks.",
+  "incident_data": {
+    "location": "classroom",
+    "behavior_description": "Johnny Rivera is having an aggressive outburst and throwing items around the classroom",
+    "keywords": [
+      "aggressive",
+      "throwing"
+    ],
+    "severity": "high",
+    "time_period": "instructional",
+    "noise_level_db": -45.0,
+    "is_transition": false,
+    "is_crisis": true,
+    "student_info": {
+      "student_found": true,
+      "student_id": "stu001",
+      "first_name": "Johnny",
+      "last_name": "Rivera",
+      "has_bip": true,
+      "bip_strategy": "Use calm tone and offer movement breaks.",
+      "matched_name": "johnny"
+    }
+  },
+  "behavior_timeline": [],
+  "recommendations_given": [
+    {
+      "timestamp": "2025-06-07T18:33:20.278728",
+      "recommendation": "**BIP-AWARE RECOMMENDATION for Johnny Rivera:**\n\nPriority Strategy (from BIP): Use calm tone and offer movement breaks.\n\nStandard Protocol: Apply standard de-escalation protocols and maintain safe distance.\n\nNOTE: This student has a Behavior Intervention Plan. The BIP strategy should be implemented first, followed by standard protocols if needed.",
+      "bip_enhanced": true
+    }
+  ],
+  "outcome": "successfully resolved with BIP strategies"
+}

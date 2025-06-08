@@ -73,17 +73,8 @@ class CrisisAlertSystem:
         keywords = analysis_data.get('keywords', [])
         behavior_type = analysis_data.get('behavior_type', 'behavioral incident')
         
-        # Load version info for email subject
-        try:
-            import json
-            with open('model_version.json', 'r') as f:
-                version_info = json.load(f)
-            version_tag = f" [Model v{version_info['version']}]"
-        except:
-            version_tag = " [Model v2.0]"
-        
         # Create email subject
-        subject = f"URGENT: Behavioral Crisis Alert{version_tag} - {location.title()}"
+        subject = f"URGENT: Behavioral Crisis Alert - {location.title()}"
         
         # Create detailed email body
         body = f"BEHAVIORAL CRISIS ALERT\n"

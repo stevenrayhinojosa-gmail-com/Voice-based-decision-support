@@ -1,0 +1,243 @@
+{% extends "layout.html" %}
+
+{% block title %}Teacher Feedback Statistics - SereniTeach{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="h2"><i class="fas fa-chart-bar me-3"></i>Teacher Feedback Statistics</h1>
+                <a href="/" class="btn btn-outline-primary">
+                    <i class="fas fa-microphone me-2"></i>Back to Voice Interface
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistics Overview -->
+    <div class="row mb-4">
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4 class="card-title">{{ stats.total }}</h4>
+                            <p class="card-text">Total Feedback</p>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-comments fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4 class="card-title">{{ stats.positive }}</h4>
+                            <p class="card-text">Positive ({{ stats.positive_percentage }}%)</p>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-thumbs-up fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card bg-warning text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4 class="card-title">{{ stats.negative }}</h4>
+                            <p class="card-text">Negative ({{ stats.negative_percentage }}%)</p>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-thumbs-down fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card bg-info text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4 class="card-title">{{ stats.with_comments }}</h4>
+                            <p class="card-text">With Comments</p>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-comment-alt fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Effectiveness Chart -->
+    {% if stats.total > 0 %}
+    <div class="row mb-4">
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Recommendation Effectiveness</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-6">
+                            <div class="text-center">
+                                <div class="bg-success text-white rounded p-3 mb-2">
+                                    <h3>{{ stats.positive_percentage }}%</h3>
+                                </div>
+                                <p class="text-muted">Helpful</p>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="text-center">
+                                <div class="bg-warning text-white rounded p-3 mb-2">
+                                    <h3>{{ stats.negative_percentage }}%</h3>
+                                </div>
+                                <p class="text-muted">Not Helpful</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Feedback Quality</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-6">
+                            <div class="text-center">
+                                <div class="bg-info text-white rounded p-3 mb-2">
+                                    <h3>{{ ((stats.with_comments / stats.total) * 100) | round(1) }}%</h3>
+                                </div>
+                                <p class="text-muted">With Comments</p>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="text-center">
+                                <div class="bg-secondary text-white rounded p-3 mb-2">
+                                    <h3>{{ (((stats.total - stats.with_comments) / stats.total) * 100) | round(1) }}%</h3>
+                                </div>
+                                <p class="text-muted">Quick Response</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Recent Feedback -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Recent Feedback Entries</h5>
+                </div>
+                <div class="card-body">
+                    {% if recent_feedback %}
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Time</th>
+                                    <th>Incident ID</th>
+                                    <th>Feedback</th>
+                                    <th>Comment</th>
+                                    <th>Teacher</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for feedback in recent_feedback|reverse %}
+                                <tr>
+                                    <td>{{ feedback.Date }}</td>
+                                    <td>{{ feedback.Time }}</td>
+                                    <td><small class="text-muted">{{ feedback.Incident_ID }}</small></td>
+                                    <td>
+                                        {% if feedback.Feedback == 'positive' %}
+                                        <span class="badge bg-success">
+                                            <i class="fas fa-thumbs-up me-1"></i>Positive
+                                        </span>
+                                        {% else %}
+                                        <span class="badge bg-warning">
+                                            <i class="fas fa-thumbs-down me-1"></i>Negative
+                                        </span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if feedback.Comment %}
+                                        <small>{{ feedback.Comment }}</small>
+                                        {% else %}
+                                        <small class="text-muted">No comment</small>
+                                        {% endif %}
+                                    </td>
+                                    <td><small class="text-muted">{{ feedback.Teacher_Email }}</small></td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-comment-slash fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">No feedback entries yet</h5>
+                        <p class="text-muted">Feedback will appear here after teachers provide responses to incident reports.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- System Information -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">About Teacher Feedback System</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>How It Works:</h6>
+                            <ul class="list-unstyled">
+                                <li><i class="fas fa-check text-success me-2"></i>Teachers report behavioral incidents via voice</li>
+                                <li><i class="fas fa-check text-success me-2"></i>System generates immediate recommendations</li>
+                                <li><i class="fas fa-check text-success me-2"></i>Crisis alerts sent automatically when needed</li>
+                                <li><i class="fas fa-check text-success me-2"></i>Detailed incident reports emailed to teachers</li>
+                                <li><i class="fas fa-check text-success me-2"></i>Teachers provide feedback via voice commands</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Voice Feedback Commands:</h6>
+                            <ul class="list-unstyled">
+                                <li><i class="fas fa-microphone text-primary me-2"></i>"Crisis is over" - End incident and request feedback</li>
+                                <li><i class="fas fa-thumbs-up text-success me-2"></i>"Thumbs up" - Mark recommendation as helpful</li>
+                                <li><i class="fas fa-thumbs-down text-warning me-2"></i>"Thumbs down" - Mark recommendation as not helpful</li>
+                                <li><i class="fas fa-comment text-info me-2"></i>"Comment [your feedback]" - Add detailed feedback</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,72 @@
+Please implement full model versioning for the SereniTeach behavioral support app as Version 2.0.
+
+Include the following:
+
+---
+
+🟢 1. Create a Version Metadata File:
+Create `model_version.json` with:
+
+{
+  "model_name": "SereniTeach",
+  "version": "2.0",
+  "created_on": "2025-06-07",
+  "description": "Includes voice-based behavior detection, NLP clarifications, multilingual support (English/Spanish), BIP integration, positive reinforcement, incident report generation, feedback collection, crisis heatmap, and synthetic student data logging.",
+  "features": [
+    "Voice-triggered crisis handler",
+    "Student name + BIP detection",
+    "Post-crisis incident reports with attached visualizations",
+    "Thumbs up/down feedback system",
+    "Multilingual (EN/ES) voice prompts",
+    "Inference testing mode",
+    "Behavior heatmap dashboard"
+  ],
+  "inference_test_pass_rate": "80%",
+  "last_inference_tested": "2025-06-07"
+}
+
+---
+
+🟢 2. Add In-App Version Labeling:
+- Display “Running SereniTeach Model Version 2.0” in the app UI and logs.
+- Include version number in:
+  - Incident reports (e.g., at the bottom)
+  - Email subject lines (e.g., “SereniTeach Report [Model v2.0]”)
+  - Dashboard header/footer if available
+
+---
+
+🟢 3. Archive the Codebase:
+- Create a directory: `versions/v2_0_release/`
+- Copy all core project files into this folder:
+  - `app.py`
+  - `model_version.json`
+  - `student_roster.json`
+  - `bip_index.json`
+  - `behavior_logs/`
+  - any relevant templates or assets
+
+---
+
+🟢 4. Update README:
+In `README.md`, add:
+
+## Model Versions
+
+- ✅ **Version 2.0** (Current Stable)
+  - Released: 2025-06-07
+  - Summary: Multilingual support, BIP logic, crisis feedback, behavior heatmaps, incident reporting.
+
+- 🧪 Version 1.0
+  - Early prototype with basic decision tree logic
+
+---
+
+🟢 5. Tag in Git (if Git is enabled):
+Run these commands:
+  git tag -a v2.0 -m "SereniTeach Model Version 2"
+  git push origin v2.0
+
+---
+
+This will complete full versioning of the SereniTeach app and prepare the codebase for future iterations.

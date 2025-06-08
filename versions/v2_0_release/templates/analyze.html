@@ -1,0 +1,224 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <h1 class="mb-3">Analyze Behavioral Data</h1>
+        <p class="lead">Train machine learning models and analyze patterns in behavioral data</p>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Data Overview Section -->
+    <div class="col-md-4 mb-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-database me-2"></i> Data Overview</h5>
+            </div>
+            <div class="card-body">
+                {% if data_empty %}
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    No behavioral data available for analysis.
+                </div>
+                <p>Before you can train models, you need to add behavioral data to the system.</p>
+                <a href="{{ url_for('data_entry') }}" class="btn btn-primary">
+                    <i class="fas fa-plus me-2"></i> Add Behavioral Data
+                </a>
+                {% else %}
+                <div class="mb-3">
+                    <h6>Data Statistics</h6>
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Data Entries
+                            <span class="badge bg-primary rounded-pill">{{ data_stats.num_entries }}</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Features
+                            <span class="badge bg-info rounded-pill">{{ data_stats.num_features }}</span>
+                        </li>
+                    </ul>
+                </div>
+                
+                <div class="mb-3">
+                    <h6>Available Columns</h6>
+                    <div class="alert alert-secondary">
+                        <small>{{ data_stats.sample_columns }}</small>
+                    </div>
+                </div>
+                
+                <a href="{{ url_for('data_entry') }}" class="btn btn-outline-primary">
+                    <i class="fas fa-plus me-1"></i> Add More Data
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Train New Model Section -->
+    <div class="col-md-8 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-cogs me-2"></i> Train New Model</h5>
+            </div>
+            <div class="card-body">
+                {% if data_empty %}
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    You need to add behavioral data before training models.
+                </div>
+                {% else %}
+                <form method="POST" action="{{ url_for('analyze') }}">
+                    {{ form.hidden_tag() }}
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="model_type" class="form-label">{{ form.model_type.label }}</label>
+                            {{ form.model_type(class="form-select") }}
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label for="target_column" class="form-label">{{ form.target_column.label }}</label>
+                            {{ form.target_column(class="form-select") }}
+                        </div>
+                    </div>
+                    
+                    <div class="row" id="decision-tree-params">
+                        <div class="col-md-6 mb-3">
+                            <label for="max_depth" class="form-label">{{ form.max_depth.label }}</label>
+                            {{ form.max_depth(class="form-control") }}
+                            <div class="form-text">Controls tree complexity (1-20)</div>
+                        </div>
+                    </div>
+                    
+                    <div class="row" id="random-forest-params" style="display: none;">
+                        <div class="col-md-6 mb-3">
+                            <label for="n_estimators" class="form-label">{{ form.n_estimators.label }}</label>
+                            {{ form.n_estimators(class="form-control") }}
+                            <div class="form-text">Number of trees (10-1000)</div>
+                        </div>
+                    </div>
+                    
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>What will happen:</strong>
+                        <p class="mb-0">The system will train a machine learning model to predict the selected target column based on other features in your behavioral data.</p>
+                    </div>
+                    
+                    {{ form.submit(class="btn btn-primary") }}
+                </form>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Existing Models Section -->
+<div class="row">
+    <div class="col-md-12 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-chart-bar me-2"></i> Trained Models</h5>
+            </div>
+            <div class="card-body">
+                {% if models %}
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Type</th>
+                                <th>Target</th>
+                                <th>Features</th>
+                                <th>Performance</th>
+                                <th>Created</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for model in models %}
+                            <tr>
+                                <td>{{ model.name }}</td>
+                                <td>
+                                    <span class="badge bg-{{ 'primary' if model.model_type == 'decision_tree' else 'info' }}">
+                                        {{ model.model_type.replace('_', ' ').title() }}
+                                    </span>
+                                </td>
+                                <td>{{ model.target }}</td>
+                                <td>
+                                    {% set features = model.features|tojson|fromjson %}
+                                    <span class="badge bg-secondary">{{ features|length }} features</span>
+                                    <button type="button" class="btn btn-sm btn-link p-0 ms-1" data-bs-toggle="popover" 
+                                            title="Features" data-bs-content="{{ features|join(', ') }}" data-bs-trigger="focus">
+                                        <i class="fas fa-info-circle"></i>
+                                    </button>
+                                </td>
+                                <td>
+                                    {% if model.performance_metrics %}
+                                    {% set metrics = model.performance_metrics|tojson|fromjson %}
+                                    {% if metrics.accuracy %}
+                                    <div class="progress" style="height: 20px;" title="Accuracy: {{ (metrics.accuracy * 100)|round(2) }}%">
+                                        <div class="progress-bar bg-success" role="progressbar" 
+                                             style="width: {{ (metrics.accuracy * 100)|round }}%;" 
+                                             aria-valuenow="{{ (metrics.accuracy * 100)|round }}" 
+                                             aria-valuemin="0" aria-valuemax="100">
+                                            {{ (metrics.accuracy * 100)|round }}%
+                                        </div>
+                                    </div>
+                                    {% else %}
+                                    <span class="text-muted">No metrics available</span>
+                                    {% endif %}
+                                    {% else %}
+                                    <span class="text-muted">No metrics available</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ model.created_at.strftime('%Y-%m-%d') }}</td>
+                                <td>
+                                    <a href="{{ url_for('predict') }}" class="btn btn-sm btn-primary">
+                                        <i class="fas fa-magic me-1"></i> Use
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i> No machine learning models have been trained yet.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Show/hide appropriate parameters based on model type
+    const modelTypeSelect = document.getElementById('model_type');
+    const decisionTreeParams = document.getElementById('decision-tree-params');
+    const randomForestParams = document.getElementById('random-forest-params');
+    
+    if (modelTypeSelect && decisionTreeParams && randomForestParams) {
+        // Set initial state
+        updateModelParams();
+        
+        // Add change event listener
+        modelTypeSelect.addEventListener('change', updateModelParams);
+        
+        function updateModelParams() {
+            if (modelTypeSelect.value === 'decision_tree') {
+                decisionTreeParams.style.display = 'flex';
+                randomForestParams.style.display = 'none';
+            } else if (modelTypeSelect.value === 'random_forest') {
+                decisionTreeParams.style.display = 'none';
+                randomForestParams.style.display = 'flex';
+            }
+        }
+    }
+});
+</script>
+{% endblock %}

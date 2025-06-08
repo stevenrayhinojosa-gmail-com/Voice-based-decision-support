@@ -1,0 +1,102 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <h1 class="mb-3">Decision Support Process</h1>
+        <p class="lead">Protocol: <strong>{{ protocol.name }}</strong></p>
+        
+        <div class="progress mb-4">
+            <div class="progress-bar bg-primary" role="progressbar" style="width: 50%;" aria-valuenow="50" aria-valuemin="0" aria-valuemax="100">
+                In Progress
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8 offset-md-2">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-question-circle me-2"></i> 
+                    Decision Point {{ decision_point.order }}
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-primary mb-4">
+                    <h4 class="alert-heading mb-3">{{ decision_point.question }}</h4>
+                </div>
+                
+                <form method="POST" action="{{ url_for('decision_process') }}">
+                    {% for option in options %}
+                    <div class="card mb-3 decision-option">
+                        <div class="card-body">
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="option_id" id="option_{{ option.id }}" value="{{ option.id }}">
+                                <label class="form-check-label w-100" for="option_{{ option.id }}">
+                                    <h5 class="mb-2">{{ option.text }}</h5>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                    
+                    <div class="d-flex justify-content-between mt-4">
+                        <a href="{{ url_for('decision_support') }}" class="btn btn-outline-secondary">
+                            <i class="fas fa-times me-1"></i> Cancel Process
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-arrow-right me-1"></i> Continue
+                        </button>
+                    </div>
+                </form>
+            </div>
+            <div class="card-footer text-muted">
+                <i class="fas fa-info-circle me-1"></i> 
+                Select the most appropriate response based on the current situation
+            </div>
+        </div>
+        
+        <!-- Protocol Information -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-info-circle me-2"></i> About This Protocol
+                </h5>
+            </div>
+            <div class="card-body">
+                <h6>{{ protocol.name }}</h6>
+                <p>
+                    {{ protocol.description }}
+                </p>
+                
+                {% if protocol.category %}
+                <div>
+                    <span class="badge bg-secondary">{{ protocol.category }}</span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Make entire option card clickable
+    const optionCards = document.querySelectorAll('.decision-option');
+    
+    optionCards.forEach(card => {
+        card.addEventListener('click', function() {
+            // Find the radio input inside this card
+            const radioInput = this.querySelector('input[type="radio"]');
+            if (radioInput) {
+                radioInput.checked = true;
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,100 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <h1 class="mb-3">ML-Based Prediction</h1>
+        <p class="lead">Use machine learning models to predict outcomes and get recommendations</p>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8 offset-md-2 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-chart-line me-2"></i> Make a Prediction</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('predict') }}">
+                    {{ form.hidden_tag() }}
+                    
+                    <div class="mb-3">
+                        <label for="model_id" class="form-label">{{ form.model_id.label }}</label>
+                        {{ form.model_id(class="form-select" + (" is-invalid" if form.model_id.errors else "")) }}
+                        {% for error in form.model_id.errors %}
+                        <div class="invalid-feedback">{{ error }}</div>
+                        {% endfor %}
+                        <div class="form-text">Choose a trained model to make predictions</div>
+                    </div>
+                    
+                    <div class="alert alert-info mb-4">
+                        <i class="fas fa-info-circle me-2"></i>
+                        The form fields below will change based on the selected model's required features.
+                    </div>
+                    
+                    <div id="prediction-form-fields" class="mb-4">
+                        <div class="text-center py-4">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <p class="mt-2 text-muted">Loading model fields...</p>
+                        </div>
+                    </div>
+                    
+                    {{ form.submit(class="btn btn-primary") }}
+                    <a href="{{ url_for('decision_support') }}" class="btn btn-outline-secondary ms-2">
+                        <i class="fas fa-sitemap me-1"></i> Try Protocol-Based Support
+                    </a>
+                </form>
+            </div>
+        </div>
+        
+        <!-- ML Model Explanation -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-robot me-2"></i> How ML Prediction Works</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4 text-center mb-3">
+                        <div class="p-3">
+                            <i class="fas fa-database text-primary" style="font-size: 2.5rem;"></i>
+                        </div>
+                        <h6>1. Data Collection</h6>
+                        <p class="small">Behavioral data is collected and processed</p>
+                    </div>
+                    
+                    <div class="col-md-4 text-center mb-3">
+                        <div class="p-3">
+                            <i class="fas fa-cogs text-info" style="font-size: 2.5rem;"></i>
+                        </div>
+                        <h6>2. Model Training</h6>
+                        <p class="small">ML models learn patterns from the data</p>
+                    </div>
+                    
+                    <div class="col-md-4 text-center mb-3">
+                        <div class="p-3">
+                            <i class="fas fa-lightbulb text-warning" style="font-size: 2.5rem;"></i>
+                        </div>
+                        <h6>3. Prediction</h6>
+                        <p class="small">Models make predictions on new data</p>
+                    </div>
+                </div>
+                
+                <div class="alert alert-light mt-2">
+                    <p class="mb-0 small">
+                        <strong>Note:</strong> ML models are only as good as the data they're trained on. 
+                        The more quality behavioral data you collect, the more accurate your predictions will be.
+                    </p>
+                </div>
+                
+                <div class="text-center mt-3">
+                    <a href="{{ url_for('analyze') }}" class="btn btn-outline-info">
+                        <i class="fas fa-chart-pie me-1"></i> Train New Model
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

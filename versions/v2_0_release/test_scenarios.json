@@ -1,0 +1,126 @@
+{
+  "test_scenarios": [
+    {
+      "test_id": "TEST_001",
+      "voice_transcript": "The student is yelling at me and trying to leave the classroom",
+      "expected_behavior": ["verbal_aggression", "elopement"],
+      "expected_severity": "high",
+      "expected_recommendation": "SAMA Crisis Response Protocol",
+      "description": "Combined verbal aggression and elopement attempt"
+    },
+    {
+      "test_id": "TEST_002",
+      "voice_transcript": "She's hitting other students during math time",
+      "expected_behavior": ["physical_aggression"],
+      "expected_severity": "severe",
+      "expected_recommendation": "Physical Intervention Protocol",
+      "description": "Physical aggression towards peers"
+    },
+    {
+      "test_id": "TEST_003",
+      "voice_transcript": "He won't follow directions and keeps talking out of turn",
+      "expected_behavior": ["defiance", "disruption"],
+      "expected_severity": "medium",
+      "expected_recommendation": "Choice-making Protocol",
+      "description": "Mild defiance and classroom disruption"
+    },
+    {
+      "test_id": "TEST_004",
+      "voice_transcript": "The student is banging their head against the wall",
+      "expected_behavior": ["self_harm"],
+      "expected_severity": "critical",
+      "expected_recommendation": "Safety Protocol",
+      "description": "Self-injurious behavior requiring immediate intervention"
+    },
+    {
+      "test_id": "TEST_005",
+      "voice_transcript": "She threw her pencil and tore up her worksheet",
+      "expected_behavior": ["property_destruction"],
+      "expected_severity": "medium",
+      "expected_recommendation": "De-escalation Protocol",
+      "description": "Destruction of classroom materials"
+    },
+    {
+      "test_id": "TEST_006",
+      "voice_transcript": "He's making loud noises during reading time and won't stop",
+      "expected_behavior": ["disruption"],
+      "expected_severity": "low",
+      "expected_recommendation": "Redirection Protocol",
+      "description": "Mild classroom disruption"
+    },
+    {
+      "test_id": "TEST_007",
+      "voice_transcript": "The student ran out of the classroom towards the exit",
+      "expected_behavior": ["elopement"],
+      "expected_severity": "severe",
+      "expected_recommendation": "Safety Protocol",
+      "description": "Elopement behavior with safety concerns"
+    },
+    {
+      "test_id": "TEST_008",
+      "voice_transcript": "She's cursing and threatening to hurt someone",
+      "expected_behavior": ["verbal_aggression"],
+      "expected_severity": "high",
+      "expected_recommendation": "SAMA Crisis Response Protocol",
+      "description": "Threatening verbal behavior"
+    },
+    {
+      "test_id": "TEST_009",
+      "voice_transcript": "He refuses to do his work and says no to everything I ask",
+      "expected_behavior": ["defiance"],
+      "expected_severity": "medium",
+      "expected_recommendation": "Choice-making Protocol",
+      "description": "Oppositional defiant behavior"
+    },
+    {
+      "test_id": "TEST_010",
+      "voice_transcript": "The student is crying and having a meltdown about the assignment",
+      "expected_behavior": ["emotional_outburst"],
+      "expected_severity": "medium",
+      "expected_recommendation": "De-escalation Protocol",
+      "description": "Emotional dysregulation and distress"
+    },
+    {
+      "test_id": "TEST_011",
+      "voice_transcript": "Emergency - student has a knife and is threatening others",
+      "expected_behavior": ["physical_aggression", "weapon_threat"],
+      "expected_severity": "critical",
+      "expected_recommendation": "Emergency Response Protocol",
+      "description": "Weapon threat requiring immediate emergency response",
+      "is_emergency": true
+    },
+    {
+      "test_id": "TEST_012",
+      "voice_transcript": "She's quietly refusing to participate but not being disruptive",
+      "expected_behavior": ["passive_resistance"],
+      "expected_severity": "low",
+      "expected_recommendation": "Engagement Protocol",
+      "description": "Passive non-compliance without disruption"
+    },
+    {
+      "test_id": "TEST_013",
+      "voice_transcript": "The student is pushing desks and chairs around angrily",
+      "expected_behavior": ["property_destruction", "physical_aggression"],
+      "expected_severity": "high",
+      "expected_recommendation": "Physical Intervention Protocol",
+      "description": "Aggressive property destruction with escalation potential"
+    },
+    {
+      "test_id": "TEST_014",
+      "voice_transcript": "He's making inappropriate comments to female students",
+      "expected_behavior": ["verbal_aggression", "inappropriate_behavior"],
+      "expected_severity": "high",
+      "expected_recommendation": "Administrative Protocol",
+      "description": "Inappropriate sexual behavior requiring administrative intervention"
+    },
+    {
+      "test_id": "TEST_015",
+      "voice_transcript": "The student seems really upset but I'm not sure what's wrong",
+      "expected_behavior": ["unclear_distress"],
+      "expected_severity": "medium",
+      "expected_recommendation": "Assessment Protocol",
+      "description": "Ambiguous behavioral situation requiring clarification",
+      "requires_clarification": true
+    }
+  ]
+}

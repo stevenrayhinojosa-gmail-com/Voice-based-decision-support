@@ -1,0 +1,422 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row mb-4">
+        <div class="col-md-12 text-center">
+            <h1 class="mb-3">Voice Response System</h1>
+            <p class="lead">Describe the student behavior in your own words and get instant recommendations</p>
+        </div>
+    </div>
+
+    <!-- Status panels -->
+    <div class="row mb-4">
+        <div class="col-lg-10 offset-lg-1">
+            <div class="card shadow">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col-md-4 text-center mb-3 mb-md-0">
+                            <div id="statusIndicator" class="d-inline-block rounded-circle p-3 mb-2 bg-secondary">
+                                <i class="fas fa-comment-alt fa-2x text-white"></i>
+                            </div>
+                            <div id="statusText" class="h5 mb-0">Ready</div>
+                        </div>
+                        <div class="col-md-8">
+                            <div class="alert alert-info mb-0">
+                                <div class="d-flex align-items-center">
+                                    <div class="me-3">
+                                        <i class="fas fa-info-circle fa-2x"></i>
+                                    </div>
+                                    <div>
+                                        <div class="fw-bold">Enter your description below</div>
+                                        <p class="mb-0">Describe the behavior situation and I'll give you an instant recommendation based on your context.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Context Information -->
+    <div class="row mb-4">
+        <div class="col-lg-10 offset-lg-1">
+            <div class="card bg-light">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-clock me-2"></i> Current Context</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4 text-center border-end">
+                            <div class="mb-1 fw-bold">Time Period</div>
+                            <div id="timePeriod" class="badge bg-info rounded-pill fs-6 mb-0">Loading...</div>
+                        </div>
+                        <div class="col-md-4 text-center border-end">
+                            <div class="mb-1 fw-bold">Noise Level</div>
+                            <div id="noiseLevel" class="badge bg-success rounded-pill fs-6 mb-0">Loading...</div>
+                        </div>
+                        <div class="col-md-4 text-center">
+                            <div class="mb-1 fw-bold">Setting</div>
+                            <select id="settingSelect" class="form-select form-select-sm mx-auto" style="max-width: 150px;">
+                                <option value="classroom">Classroom</option>
+                                <option value="hallway">Hallway</option>
+                                <option value="cafeteria">Cafeteria</option>
+                                <option value="playground">Playground</option>
+                                <option value="gym">Gymnasium</option>
+                                <option value="library">Library</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom Input Section -->
+    <div class="row mb-4">
+        <div class="col-lg-10 offset-lg-1">
+            <div class="card border-primary">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0"><i class="fas fa-comment me-2"></i> Describe the Behavior</h4>
+                </div>
+                <div class="card-body">
+                    <div class="form-group">
+                        <textarea id="customTextInput" class="form-control mb-3" rows="3" 
+                                  placeholder="Example: The student is throwing objects and refusing to follow directions..."></textarea>
+                        <div class="d-grid gap-2">
+                            <button id="analyzeBtn" class="btn btn-primary">
+                                <i class="fas fa-search me-2"></i>Analyze Behavior
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recommendation Display -->
+    <div class="row">
+        <div class="col-lg-10 offset-lg-1">
+            <div id="recommendationCard" class="card border-success mb-4" style="display: none;">
+                <div class="card-header bg-success text-white">
+                    <h4 class="mb-0"><i class="fas fa-check-circle me-2"></i> Recommendation</h4>
+                </div>
+                <div class="card-body">
+                    <div id="behaviorTypeSection" class="mb-3">
+                        <div class="fw-bold">Behavior Type:</div>
+                        <div id="behaviorType" class="badge bg-primary mb-1"></div>
+                    </div>
+                    
+                    <div id="severitySection" class="mb-3">
+                        <div class="fw-bold">Severity Level:</div>
+                        <div id="severityLevel" class="badge bg-warning mb-1"></div>
+                    </div>
+                    
+                    <div id="emergencyAlert" class="alert alert-danger" style="display: none;">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>Emergency signals detected!</strong> This situation requires immediate attention.
+                    </div>
+                    
+                    <div class="mb-3">
+                        <h5 class="card-title">Recommended Protocol:</h5>
+                        <div id="protocolName" class="alert alert-info"></div>
+                    </div>
+                    
+                    <div id="contextNoteSection" class="mb-3" style="display: none;">
+                        <div class="alert alert-warning">
+                            <strong><i class="fas fa-lightbulb me-2"></i> Contextual Note:</strong>
+                            <div id="contextNote"></div>
+                        </div>
+                    </div>
+                    
+                    <div id="actionSection">
+                        <h5 class="card-title">Recommended Actions:</h5>
+                        <div id="actionSteps" class="card bg-light">
+                            <div class="card-body">
+                                <p id="recommendationText" class="card-text"></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Tips Card -->
+            <div class="card mb-4">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0"><i class="fas fa-lightbulb me-2"></i> Example Phrases</h5>
+                </div>
+                <div class="card-body">
+                    <p class="mb-3">Try these phrases to get started:</p>
+                    <ul class="mb-0">
+                        <li class="mb-2">"A student is throwing objects in the classroom"</li>
+                        <li class="mb-2">"The student is refusing to do any work during class"</li>
+                        <li class="mb-2">"Student is having an anxiety attack in the cafeteria"</li>
+                        <li class="mb-2">"A child is showing aggressive behavior toward other students"</li>
+                        <li>"Student is constantly disrupting the class with outbursts"</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Hidden elements for API communication -->
+<input type="hidden" id="isProcessing" value="false">
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Elements
+    const statusIndicator = document.getElementById('statusIndicator');
+    const statusText = document.getElementById('statusText');
+    const recommendationCard = document.getElementById('recommendationCard');
+    const behaviorType = document.getElementById('behaviorType');
+    const severityLevel = document.getElementById('severityLevel');
+    const emergencyAlert = document.getElementById('emergencyAlert');
+    const protocolName = document.getElementById('protocolName');
+    const contextNoteSection = document.getElementById('contextNoteSection');
+    const contextNote = document.getElementById('contextNote');
+    const recommendationText = document.getElementById('recommendationText');
+    const timePeriod = document.getElementById('timePeriod');
+    const noiseLevel = document.getElementById('noiseLevel');
+    const settingSelect = document.getElementById('settingSelect');
+    const customTextInput = document.getElementById('customTextInput');
+    const analyzeBtn = document.getElementById('analyzeBtn');
+    const isProcessing = document.getElementById('isProcessing');
+    
+    // Add event listener to the analyze button
+    analyzeBtn.addEventListener('click', processText);
+
+    // Update context data periodically
+    function updateContextData() {
+        fetch('/api/context_data')
+            .then(response => response.json())
+            .then(data => {
+                // Update context display
+                timePeriod.textContent = data.time_period.name.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                
+                const noise = parseFloat(data.noise_level_db);
+                noiseLevel.textContent = noise.toFixed(1) + ' dB';
+                
+                // Change noise level color based on value
+                if (noise < -70) {
+                    noiseLevel.className = 'badge bg-success rounded-pill fs-6 mb-0';
+                } else if (noise < -55) {
+                    noiseLevel.className = 'badge bg-warning rounded-pill fs-6 mb-0';
+                } else {
+                    noiseLevel.className = 'badge bg-danger rounded-pill fs-6 mb-0';
+                }
+            })
+            .catch(error => console.error('Error fetching context data:', error));
+    }
+
+    // Process the custom text input
+    function processText() {
+        if (isProcessing.value === 'true') return;
+        
+        const userText = customTextInput.value.trim();
+        if (!userText) {
+            alert('Please enter a description of the behavior.');
+            return;
+        }
+        
+        // Update UI state
+        statusIndicator.className = 'd-inline-block rounded-circle p-3 mb-2 bg-warning';
+        statusText.textContent = 'Processing...';
+        isProcessing.value = 'true';
+        
+        // Disable the button while processing
+        analyzeBtn.disabled = true;
+        analyzeBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Processing...';
+        
+        // Hide previous recommendation if any
+        recommendationCard.style.display = 'none';
+        
+        // Capture setting from select box
+        const setting = settingSelect.value;
+        
+        // Send data to API
+        const speechData = {
+            text: userText,
+            setting: setting
+        };
+        
+        fetch('/voice_capture', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(speechData)
+        })
+        .then(response => response.json())
+        .then(data => {
+            // Reset status
+            statusIndicator.className = 'd-inline-block rounded-circle p-3 mb-2 bg-success';
+            statusText.textContent = 'Analysis Complete';
+            isProcessing.value = 'false';
+            
+            // Display recommendation
+            displayRecommendation(data);
+            
+            // Reset button state
+            analyzeBtn.disabled = false;
+            analyzeBtn.innerHTML = '<i class="fas fa-search me-2"></i>Analyze Behavior';
+        })
+        .catch(error => {
+            console.error('Error processing text:', error);
+            statusIndicator.className = 'd-inline-block rounded-circle p-3 mb-2 bg-danger';
+            statusText.textContent = 'Error';
+            isProcessing.value = 'false';
+            
+            // Reset button state
+            analyzeBtn.disabled = false;
+            analyzeBtn.innerHTML = '<i class="fas fa-search me-2"></i>Analyze Behavior';
+        });
+    }
+    
+    function displayRecommendation(data) {
+        // Show recommendation card
+        recommendationCard.style.display = 'block';
+        
+        // Update behavior type
+        if (data.analysis && data.analysis.protocol_analysis && data.analysis.keywords) {
+            const keywords = data.analysis.keywords.join(', ');
+            behaviorType.textContent = keywords.charAt(0).toUpperCase() + keywords.slice(1);
+        } else {
+            behaviorType.textContent = 'General Behavior Issue';
+        }
+        
+        // Update severity level
+        let severity = 'Medium';
+        let severityClass = 'bg-warning';
+        
+        if (data.analysis && data.analysis.protocol_analysis && data.analysis.protocol_analysis.confidence) {
+            const confidence = data.analysis.protocol_analysis.confidence;
+            if (confidence > 0.7) {
+                severity = 'High';
+                severityClass = 'bg-danger';
+            } else if (confidence < 0.4) {
+                severity = 'Low';
+                severityClass = 'bg-success';
+            }
+        }
+        
+        severityLevel.textContent = severity;
+        severityLevel.className = `badge ${severityClass} mb-1`;
+        
+        // Show emergency alert if needed
+        if (data.analysis && data.analysis.is_emergency) {
+            emergencyAlert.style.display = 'block';
+        } else {
+            emergencyAlert.style.display = 'none';
+        }
+        
+        // Update protocol name
+        if (data.analysis && data.analysis.protocol_id) {
+            if (data.analysis.protocol_analysis && data.analysis.protocol_analysis.selected_option) {
+                protocolName.textContent = `Selected Option: ${data.analysis.protocol_analysis.selected_option.text}`;
+            } else {
+                protocolName.textContent = `Protocol #${data.analysis.protocol_id}`;
+            }
+        } else {
+            protocolName.textContent = 'General Behavioral Response Protocol';
+        }
+        
+        // Add context note if available
+        if (data.analysis && data.analysis.context_note) {
+            contextNote.textContent = data.analysis.context_note;
+            contextNoteSection.style.display = 'block';
+        } else {
+            contextNoteSection.style.display = 'none';
+        }
+        
+        // Update recommendation text
+        let recommendation = '';
+        
+        if (data.analysis && data.analysis.protocol_analysis && data.analysis.protocol_analysis.recommendation) {
+            recommendation = data.analysis.protocol_analysis.recommendation;
+        } else if (data.analysis && data.analysis.is_emergency) {
+            recommendation = `
+                <ol>
+                    <li class="mb-2"><strong>Ensure immediate safety:</strong> Remove other students from the area.</li>
+                    <li class="mb-2"><strong>Call for administrative support.</strong></li>
+                    <li class="mb-2"><strong>Follow school emergency protocols.</strong></li>
+                    <li><strong>Document the incident</strong> as soon as safely possible.</li>
+                </ol>
+            `;
+        } else {
+            const settingSpecificRecs = {
+                classroom: `
+                    <ol>
+                        <li class="mb-2"><strong>Redirect attention:</strong> Use a pre-arranged visual or verbal cue.</li>
+                        <li class="mb-2"><strong>Offer choices:</strong> Provide 2-3 acceptable options to give student sense of control.</li>
+                        <li class="mb-2"><strong>Positive reinforcement:</strong> Acknowledge any attempt to self-regulate.</li>
+                        <li><strong>Take a break:</strong> Allow student to use a designated calm-down area if needed.</li>
+                    </ol>
+                `,
+                hallway: `
+                    <ol>
+                        <li class="mb-2"><strong>Minimize audience:</strong> Redirect other students away from the situation.</li>
+                        <li class="mb-2"><strong>Clear, simple directions:</strong> Use a calm voice and simple language.</li>
+                        <li class="mb-2"><strong>Offer space:</strong> Give appropriate physical distance while maintaining supervision.</li>
+                        <li><strong>Escort to quiet area:</strong> Move to a less stimulating environment if possible.</li>
+                    </ol>
+                `,
+                cafeteria: `
+                    <ol>
+                        <li class="mb-2"><strong>Reduce sensory input:</strong> Move to a quieter area of the cafeteria.</li>
+                        <li class="mb-2"><strong>Offer alternative lunch location:</strong> If behavior continues, provide an option to eat in a quieter space.</li>
+                        <li class="mb-2"><strong>Clear expectations:</strong> Review cafeteria behavior expectations.</li>
+                        <li><strong>Positive peer modeling:</strong> Seat with peers who demonstrate appropriate behavior.</li>
+                    </ol>
+                `,
+                playground: `
+                    <ol>
+                        <li class="mb-2"><strong>Redirect to alternative activity:</strong> Suggest a different game or area of the playground.</li>
+                        <li class="mb-2"><strong>Buddy system:</strong> Pair with a peer who can model appropriate play.</li>
+                        <li class="mb-2"><strong>Take a break:</strong> Provide a supervised cool-down period at the edge of the play area.</li>
+                        <li><strong>Clear boundaries:</strong> Review specific playground rules that relate to the behavior.</li>
+                    </ol>
+                `,
+                gym: `
+                    <ol>
+                        <li class="mb-2"><strong>Modify activity:</strong> Adjust expectations or rules to reduce frustration.</li>
+                        <li class="mb-2"><strong>Offer alternatives:</strong> Provide a different role or task within the activity.</li>
+                        <li class="mb-2"><strong>Take a break:</strong> Allow a brief supervised break from physical activity.</li>
+                        <li><strong>Positive reinforcement:</strong> Recognize efforts to rejoin and participate appropriately.</li>
+                    </ol>
+                `,
+                library: `
+                    <ol>
+                        <li class="mb-2"><strong>Whispered reminders:</strong> Quietly restate expectations for library behavior.</li>
+                        <li class="mb-2"><strong>Redirect focus:</strong> Suggest a specific book or activity of interest.</li>
+                        <li class="mb-2"><strong>Provide a quiet corner:</strong> Direct to a more isolated study area if available.</li>
+                        <li><strong>Alternative task:</strong> Offer a helpful role like book shelving to channel energy.</li>
+                    </ol>
+                `
+            };
+            
+            recommendation = settingSpecificRecs[setting] || settingSpecificRecs['classroom'];
+        }
+        
+        recommendationText.innerHTML = recommendation;
+    }
+
+    // Update context data initially and set interval
+    updateContextData();
+    setInterval(updateContextData, 10000); // Update every 10 seconds
+    
+    // Add some CSS for styling
+    const style = document.createElement('style');
+    style.innerHTML = `
+        .min-height-100 {
+            min-height: 100px;
+        }
+    `;
+    document.head.appendChild(style);
+});
+</script>
+{% endblock %}

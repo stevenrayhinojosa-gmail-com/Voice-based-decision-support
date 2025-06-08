@@ -1,0 +1,41 @@
+{
+  "model_name": "SereniTeach",
+  "version": "2.0",
+  "created_on": "2025-06-08",
+  "description": "Advanced AI-powered behavioral decision support system featuring voice-based behavior detection, NLP clarifications, multilingual support (English/Spanish), BIP integration, positive reinforcement, incident report generation, feedback collection, crisis alerts, behavior analytics, PostgreSQL integration, and inference testing validation.",
+  "features": [
+    "Voice-triggered crisis handler with real-time processing",
+    "Student name + BIP detection and awareness system",
+    "Post-crisis incident reports with attached visualizations",
+    "Thumbs up/down feedback system with analytics",
+    "Multilingual (EN/ES) voice prompts and responses",
+    "Inference testing mode with behavioral model validation",
+    "Behavior heatmap dashboard with trend analysis",
+    "PostgreSQL database integration for robust data management",
+    "Crisis alert system with automated email notifications",
+    "Context-aware decision making with ambient noise sensors",
+    "Voice clarification system for ambiguous situations",
+    "Teacher encouragement system during crisis scenarios",
+    "Comprehensive behavior analytics with visualization generation"
+  ],
+  "inference_test_pass_rate": "53%",
+  "last_inference_tested": "2025-06-08",
+  "database_backend": "PostgreSQL",
+  "supported_languages": ["English", "Spanish"],
+  "test_scenarios": 15,
+  "behavioral_metrics": {
+    "severity_accuracy": "53%",
+    "behavior_detection_f1": "31%",
+    "protocol_recommendation_accuracy": "13%"
+  },
+  "technical_stack": [
+    "Python Flask",
+    "PostgreSQL Database",
+    "NLTK Natural Language Processing",
+    "scikit-learn Machine Learning",
+    "Speech Recognition",
+    "Email Integration",
+    "Context Sensors",
+    "Behavior Analytics"
+  ]
+}
