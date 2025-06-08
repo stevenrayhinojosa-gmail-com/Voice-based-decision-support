@@ -18,6 +18,7 @@ from incident_reporting import incident_reporter
 from feedback_system import TeacherFeedbackSystem
 from teacher_encouragement import TeacherEncouragementSystem
 from student_manager import StudentManager
+from localization import localization_manager, get_localized_phrase
 
 # Helper class for JSON serialization of SQLAlchemy objects
 class AlchemyEncoder(json.JSONEncoder):
@@ -944,6 +945,21 @@ def voice_capture():
         else:
             speech_text = request.form.get('voice_text', 'The student is becoming agitated and disruptive in class')
             setting = request.form.get('setting', 'classroom')
+        
+        # Check for language switch commands first
+        new_language = localization_manager.detect_language_switch(speech_text)
+        if new_language:
+            localization_manager.set_language(new_language)
+            response_message = get_localized_phrase("language_switched")
+            
+            return jsonify({
+                "success": True,
+                "language_switched": True,
+                "new_language": new_language,
+                "response": response_message,
+                "current_language": localization_manager.current_language,
+                "message": response_message
+            })
         
         # Get context data for enhanced analysis
         context_data = context_sensor.get_context_data()

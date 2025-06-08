@@ -4,6 +4,7 @@ import threading
 import time
 from flask import session
 from context_sensors import context_sensor  # Import the context sensor
+from localization import localization_manager, get_localized_phrase
 
 # Set up logging
 logger = logging.getLogger(__name__)
