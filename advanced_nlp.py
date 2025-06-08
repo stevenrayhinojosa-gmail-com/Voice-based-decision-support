@@ -191,21 +191,43 @@ class BehaviorQueryProcessor:
         - behavior_type: The identified behavior type key
         - confidence: Confidence score for the match
         """
-        # Preprocess the query
-        preprocessed_query = preprocess_text(query)
+        query_lower = query.lower()
         
-        # Transform the query using the fitted vectorizer
-        query_vector = self.vectorizer.transform([preprocessed_query])
+        # Enhanced keyword-based matching for better accuracy
+        behavior_scores = {}
         
-        # Calculate cosine similarity between query and behavior types
-        similarities = cosine_similarity(query_vector, self.behavior_vectors).flatten()
+        # Score each behavior type based on keyword matches
+        for behavior_type, keywords in self.behavior_keywords.items():
+            score = 0
+            matched_keywords = []
+            
+            for keyword in keywords:
+                if keyword in query_lower:
+                    score += 2 if len(keyword) > 5 else 1  # Longer keywords get higher weight
+                    matched_keywords.append(keyword)
+            
+            if score > 0:
+                behavior_scores[behavior_type] = {
+                    'score': score,
+                    'keywords': matched_keywords,
+                    'confidence': min(score / len(keywords), 1.0)
+                }
         
-        # Find best match
-        max_index = np.argmax(similarities)
-        best_match = self.behavior_types[max_index]
-        confidence = similarities[max_index]
+        # If no keyword matches, fall back to vectorization
+        if not behavior_scores:
+            preprocessed_query = preprocess_text(query)
+            query_vector = self.vectorizer.transform([preprocessed_query])
+            similarities = cosine_similarity(query_vector, self.behavior_vectors).flatten()
+            max_index = np.argmax(similarities)
+            best_match = self.behavior_types[max_index] if len(self.behavior_types) > max_index else 'disruption'
+            confidence = similarities[max_index] if len(similarities) > max_index else 0.3
+            return best_match, confidence
         
-        return best_match, confidence
+        # Find the highest scoring behavior type
+        best_behavior = max(behavior_scores.keys(), key=lambda x: behavior_scores[x]['score'])
+        confidence = behavior_scores[best_behavior]['confidence']
+        
+        return best_behavior, confidence
     
     def identify_severity(self, query):
         """
