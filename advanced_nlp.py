@@ -218,22 +218,73 @@ class BehaviorQueryProcessor:
         - severity: The identified severity level
         - confidence: Confidence score for the match
         """
-        preprocessed_query = preprocess_text(query)
+        preprocessed_query = preprocess_text(query.lower())
         
-        # Check for matches with severity keywords
-        max_count = 0
-        best_severity = 'medium'  # Default to medium if no clear match
+        # Enhanced severity classification with weighted scoring
+        severity_scores = {'low': 0, 'medium': 0, 'high': 0, 'severe': 0, 'critical': 0}
         
-        for severity, keywords in self.severity_keywords.items():
-            # Count how many severity keywords appear in the query
-            count = sum(1 for keyword in keywords if keyword in preprocessed_query)
-            
-            if count > max_count:
-                max_count = count
-                best_severity = severity
+        # Critical severity indicators (highest priority)
+        critical_indicators = [
+            'weapon', 'knife', 'gun', 'threat', 'kill', 'die', 'blood', 'emergency',
+            'head bang', 'self harm', 'suicide', 'cutting', 'serious injury'
+        ]
         
-        # Calculate a simple confidence score
-        confidence = max_count / len(self.severity_keywords[best_severity]) if max_count > 0 else 0.5
+        # Severe severity indicators
+        severe_indicators = [
+            'hitting', 'punching', 'kicking', 'fighting', 'attack', 'violence',
+            'hurt', 'injury', 'physical', 'dangerous', 'safety'
+        ]
+        
+        # High severity indicators
+        high_indicators = [
+            'yelling', 'screaming', 'throwing', 'aggressive', 'destructive',
+            'running away', 'elopement', 'escape', 'won\'t stop'
+        ]
+        
+        # Medium severity indicators
+        medium_indicators = [
+            'disruptive', 'defiant', 'won\'t follow', 'talking out', 'refusing',
+            'emotional', 'upset', 'crying', 'frustrated'
+        ]
+        
+        # Low severity indicators
+        low_indicators = [
+            'quiet', 'withdrawn', 'not participating', 'daydreaming',
+            'off task', 'mild', 'occasional', 'minor'
+        ]
+        
+        # Score each severity level
+        for indicator in critical_indicators:
+            if indicator in preprocessed_query:
+                severity_scores['critical'] += 3
+        
+        for indicator in severe_indicators:
+            if indicator in preprocessed_query:
+                severity_scores['severe'] += 2
+        
+        for indicator in high_indicators:
+            if indicator in preprocessed_query:
+                severity_scores['high'] += 2
+        
+        for indicator in medium_indicators:
+            if indicator in preprocessed_query:
+                severity_scores['medium'] += 1
+        
+        for indicator in low_indicators:
+            if indicator in preprocessed_query:
+                severity_scores['low'] += 1
+        
+        # Find the highest scoring severity
+        best_severity = max(severity_scores, key=severity_scores.get)
+        max_score = severity_scores[best_severity]
+        
+        # If no indicators found, default to medium
+        if max_score == 0:
+            best_severity = 'medium'
+            confidence = 0.3
+        else:
+            # Calculate confidence based on score strength
+            confidence = min(max_score / 3.0, 1.0)
         
         return best_severity, confidence
     
