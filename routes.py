@@ -21,6 +21,7 @@ from student_manager import StudentManager
 from localization import localization_manager, get_localized_phrase
 from voice_clarification import voice_clarification_system
 from database_migration import DatabaseMigrationService
+from inference_testing import inference_test_runner
 
 # Helper class for JSON serialization of SQLAlchemy objects
 class AlchemyEncoder(json.JSONEncoder):
@@ -2052,6 +2053,177 @@ def test_database_integration():
         
     except Exception as e:
         logger.error(f"Error testing database integration: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/run_inference_test', methods=['POST'])
+def run_inference_test():
+    """Run inference testing mode to validate behavioral model accuracy"""
+    try:
+        request_data = request.get_json() or {}
+        debug = request_data.get('debug', False)
+        test_filter = request_data.get('filter', None)
+        
+        # Run inference tests
+        results = inference_test_runner.run_inference_tests(debug=debug, test_filter=test_filter)
+        
+        # Generate summary message
+        if results.get('success'):
+            accuracy = results['accuracy'] * 100
+            total_tests = results['total_tests']
+            passed_tests = results['passed_tests']
+            failed_tests = results['failed_tests']
+            
+            summary_message = f"{passed_tests}/{total_tests} tests passed ({accuracy:.1f}% accuracy)"
+            
+            if failed_tests > 0:
+                failed_ids = results.get('failed_test_ids', [])
+                summary_message += f". {failed_tests} failed: {', '.join(failed_ids[:3])}"
+                if len(failed_ids) > 3:
+                    summary_message += f" and {len(failed_ids) - 3} more"
+            
+            results['summary_message'] = summary_message
+        
+        return jsonify(results)
+        
+    except Exception as e:
+        logger.error(f"Error running inference tests: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/inference_test_status')
+def inference_test_status():
+    """Get current inference testing system status and available test scenarios"""
+    try:
+        scenarios = inference_test_runner.load_test_scenarios()
+        
+        # Categorize scenarios
+        categories = {}
+        for scenario in scenarios:
+            behaviors = scenario.get('expected_behavior', [])
+            severity = scenario.get('expected_severity', 'medium')
+            
+            for behavior in behaviors:
+                if behavior not in categories:
+                    categories[behavior] = {'count': 0, 'severities': set()}
+                categories[behavior]['count'] += 1
+                categories[behavior]['severities'].add(severity)
+        
+        # Convert sets to lists for JSON serialization
+        for category in categories.values():
+            category['severities'] = list(category['severities'])
+        
+        return jsonify({
+            'success': True,
+            'system_status': 'ready',
+            'total_scenarios': len(scenarios),
+            'scenario_categories': categories,
+            'sample_scenarios': [
+                {
+                    'test_id': s['test_id'],
+                    'description': s.get('description', ''),
+                    'expected_behavior': s['expected_behavior'],
+                    'expected_severity': s['expected_severity']
+                } for s in scenarios[:5]
+            ],
+            'available_filters': list(categories.keys())
+        })
+        
+    except Exception as e:
+        logger.error(f"Error getting inference test status: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/voice_inference_test', methods=['POST'])
+def voice_inference_test():
+    """Voice-activated inference testing command"""
+    try:
+        # Handle voice command for inference testing
+        speech_text = request.json.get('speech_text', '').lower()
+        
+        # Check for inference test commands
+        if any(phrase in speech_text for phrase in [
+            'run inference test', 'start inference test', 'test inference',
+            'validate model', 'run model test', 'check model accuracy'
+        ]):
+            # Extract debug flag if mentioned
+            debug = 'debug' in speech_text or 'verbose' in speech_text
+            
+            # Extract filter if mentioned
+            test_filter = None
+            if 'aggression' in speech_text:
+                test_filter = 'aggression'
+            elif 'emergency' in speech_text:
+                test_filter = 'emergency'
+            elif 'critical' in speech_text:
+                test_filter = 'critical'
+            
+            # Run the inference tests
+            results = inference_test_runner.run_inference_tests(debug=debug, test_filter=test_filter)
+            
+            if results.get('success'):
+                accuracy = results['accuracy'] * 100
+                total_tests = results['total_tests']
+                passed_tests = results['passed_tests']
+                
+                response_message = f"Inference testing completed. {passed_tests} out of {total_tests} tests passed with {accuracy:.1f}% accuracy."
+                
+                if results['failed_tests'] > 0:
+                    response_message += f" {results['failed_tests']} tests failed and require review."
+                
+                return jsonify({
+                    'success': True,
+                    'message': response_message,
+                    'speech_response': response_message,
+                    'test_results': results,
+                    'current_language': localization_manager.current_language
+                })
+            else:
+                error_message = f"Inference testing failed: {results.get('error', 'Unknown error')}"
+                return jsonify({
+                    'success': False,
+                    'message': error_message,
+                    'speech_response': error_message,
+                    'current_language': localization_manager.current_language
+                })
+        
+        # Check for status commands
+        elif any(phrase in speech_text for phrase in [
+            'inference test status', 'test status', 'model status',
+            'how many tests', 'test scenarios'
+        ]):
+            scenarios = inference_test_runner.load_test_scenarios()
+            status_message = f"Inference testing system ready with {len(scenarios)} test scenarios available."
+            
+            return jsonify({
+                'success': True,
+                'message': status_message,
+                'speech_response': status_message,
+                'scenario_count': len(scenarios),
+                'current_language': localization_manager.current_language
+            })
+        
+        else:
+            return jsonify({
+                'success': False,
+                'message': 'Voice command not recognized for inference testing',
+                'available_commands': [
+                    'run inference test',
+                    'run inference test debug',
+                    'inference test status',
+                    'test model accuracy'
+                ],
+                'current_language': localization_manager.current_language
+            })
+            
+    except Exception as e:
+        logger.error(f"Error processing voice inference test command: {e}")
         return jsonify({
             'success': False,
             'error': str(e)

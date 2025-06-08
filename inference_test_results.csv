@@ -1,0 +1,346 @@
+test_id,description,overall_pass,behavior_f1_score,severity_match,recommendation_match,expected_behaviors,actual_behaviors,expected_severity,actual_severity,expected_recommendation,actual_recommendation,confidence_overall,timestamp,notes
+TEST_001,Combined verbal aggression and elopement attempt,FAIL,0,NO,NO,,,,,,,0,2025-06-08T12:35:32.679460,"Error: 
+**********************************************************************
+  Resource [93mpunkt_tab[0m not found.
+  Please use the NLTK Downloader to obtain the resource:
+
+  [31m>>> import nltk
+  >>> nltk.download('punkt_tab')
+  [0m
+  For more information see: https://www.nltk.org/data.html
+
+  Attempted to load [93mtokenizers/punkt_tab/english/[0m
+
+  Searched in:
+    - '/home/runner/nltk_data'
+    - '/nix/store/clx0mcir7qw8zk36zbr4jra789g3knf6-python3-3.11.10/nltk_data'
+    - '/nix/store/clx0mcir7qw8zk36zbr4jra789g3knf6-python3-3.11.10/share/nltk_data'
+    - '/nix/store/clx0mcir7qw8zk36zbr4jra789g3knf6-python3-3.11.10/lib/nltk_data'
+    - '/usr/share/nltk_data'
+    - '/usr/local/share/nltk_data'
+    - '/usr/lib/nltk_data'
+    - '/usr/local/lib/nltk_data'
+**********************************************************************
+"
+TEST_002,Physical aggression towards peers,FAIL,0,NO,NO,,,,,,,0,2025-06-08T12:35:32.679911,"Error: 
+**********************************************************************
+  Resource [93mpunkt_tab[0m not found.
+  Please use the NLTK Downloader to obtain the resource:
+
+  [31m>>> import nltk
+  >>> nltk.download('punkt_tab')
+  [0m
+  For more information see: https://www.nltk.org/data.html
+
+  Attempted to load [93mtokenizers/punkt_tab/english/[0m
+
+  Searched in:
+    - '/home/runner/nltk_data'
+    - '/nix/store/clx0mcir7qw8zk36zbr4jra789g3knf6-python3-3.11.10/nltk_data'
+    - '/nix/store/clx0mcir7qw8zk36zbr4jra789g3knf6-python3-3.11.10/share/nltk_data'
+    - '/nix/store/clx0mcir7qw8zk36zbr4jra789g3knf6-python3-3.11.10/lib/nltk_data'
+    - '/usr/share/nltk_data'
+    - '/usr/local/share/nltk_data'
+    - '/usr/lib/nltk_data'
+    - '/usr/local/lib/nltk_data'
+**********************************************************************
+"
+TEST_003,Mild defiance and classroom disruption,FAIL,0,NO,NO,,,,,,,0,2025-06-08T12:35:32.680415,"Error: 
+**********************************************************************
+  Resource [93mpunkt_tab[0m not found.
+  Please use the NLTK Downloader to obtain the resource:
+
+  [31m>>> import nltk
+  >>> nltk.download('punkt_tab')
+  [0m
+  For more information see: https://www.nltk.org/data.html
+
+  Attempted to load [93mtokenizers/punkt_tab/english/[0m
+
+  Searched in:
+    - '/home/runner/nltk_data'
+    - '/nix/store/clx0mcir7qw8zk36zbr4jra789g3knf6-python3-3.11.10/nltk_data'
+    - '/nix/store/clx0mcir7qw8zk36zbr4jra789g3knf6-python3-3.11.10/share/nltk_data'
+    - '/nix/store/clx0mcir7qw8zk36zbr4jra789g3knf6-python3-3.11.10/lib/nltk_data'
+    - '/usr/share/nltk_data'
+    - '/usr/local/share/nltk_data'
+    - '/usr/lib/nltk_data'
+    - '/usr/local/lib/nltk_data'
+**********************************************************************
+"
+TEST_004,Self-injurious behavior requiring immediate intervention,FAIL,0,NO,NO,,,,,,,0,2025-06-08T12:35:32.680796,"Error: 
+**********************************************************************
+  Resource [93mpunkt_tab[0m not found.
+  Please use the NLTK Downloader to obtain the resource:
+
+  [31m>>> import nltk
+  >>> nltk.download('punkt_tab')
+  [0m
+  For more information see: https://www.nltk.org/data.html
+
+  Attempted to load [93mtokenizers/punkt_tab/english/[0m
+
+  Searched in:
+    - '/home/runner/nltk_data'
+    - '/nix/store/clx0mcir7qw8zk36zbr4jra789g3knf6-python3-3.11.10/nltk_data'
+    - '/nix/store/clx0mcir7qw8zk36zbr4jra789g3knf6-python3-3.11.10/share/nltk_data'
+    - '/nix/store/clx0mcir7qw8zk36zbr4jra789g3knf6-python3-3.11.10/lib/nltk_data'
+    - '/usr/share/nltk_data'
+    - '/usr/local/share/nltk_data'
+    - '/usr/lib/nltk_data'
+    - '/usr/local/lib/nltk_data'
+**********************************************************************
+"
+TEST_005,Destruction of classroom materials,FAIL,0,NO,NO,,,,,,,0,2025-06-08T12:35:32.681203,"Error: 
+**********************************************************************
+  Resource [93mpunkt_tab[0m not found.
+  Please use the NLTK Downloader to obtain the resource:
+
+  [31m>>> import nltk
+  >>> nltk.download('punkt_tab')
+  [0m
+  For more information see: https://www.nltk.org/data.html
+
+  Attempted to load [93mtokenizers/punkt_tab/english/[0m
+
+  Searched in:
+    - '/home/runner/nltk_data'
+    - '/nix/store/clx0mcir7qw8zk36zbr4jra789g3knf6-python3-3.11.10/nltk_data'
+    - '/nix/store/clx0mcir7qw8zk36zbr4jra789g3knf6-python3-3.11.10/share/nltk_data'
+    - '/nix/store/clx0mcir7qw8zk36zbr4jra789g3knf6-python3-3.11.10/lib/nltk_data'
+    - '/usr/share/nltk_data'
+    - '/usr/local/share/nltk_data'
+    - '/usr/lib/nltk_data'
+    - '/usr/local/lib/nltk_data'
+**********************************************************************
+"
+TEST_006,Mild classroom disruption,FAIL,0,NO,NO,,,,,,,0,2025-06-08T12:35:32.681603,"Error: 
+**********************************************************************
+  Resource [93mpunkt_tab[0m not found.
+  Please use the NLTK Downloader to obtain the resource:
+
+  [31m>>> import nltk
+  >>> nltk.download('punkt_tab')
+  [0m
+  For more information see: https://www.nltk.org/data.html
+
+  Attempted to load [93mtokenizers/punkt_tab/english/[0m
+
+  Searched in:
+    - '/home/runner/nltk_data'
+    - '/nix/store/clx0mcir7qw8zk36zbr4jra789g3knf6-python3-3.11.10/nltk_data'
+    - '/nix/store/clx0mcir7qw8zk36zbr4jra789g3knf6-python3-3.11.10/share/nltk_data'
+    - '/nix/store/clx0mcir7qw8zk36zbr4jra789g3knf6-python3-3.11.10/lib/nltk_data'
+    - '/usr/share/nltk_data'
+    - '/usr/local/share/nltk_data'
+    - '/usr/lib/nltk_data'
+    - '/usr/local/lib/nltk_data'
+**********************************************************************
+"
+TEST_007,Elopement behavior with safety concerns,FAIL,0,NO,NO,,,,,,,0,2025-06-08T12:35:32.681965,"Error: 
+**********************************************************************
+  Resource [93mpunkt_tab[0m not found.
+  Please use the NLTK Downloader to obtain the resource:
+
+  [31m>>> import nltk
+  >>> nltk.download('punkt_tab')
+  [0m
+  For more information see: https://www.nltk.org/data.html
+
+  Attempted to load [93mtokenizers/punkt_tab/english/[0m
+
+  Searched in:
+    - '/home/runner/nltk_data'
+    - '/nix/store/clx0mcir7qw8zk36zbr4jra789g3knf6-python3-3.11.10/nltk_data'
+    - '/nix/store/clx0mcir7qw8zk36zbr4jra789g3knf6-python3-3.11.10/share/nltk_data'
+    - '/nix/store/clx0mcir7qw8zk36zbr4jra789g3knf6-python3-3.11.10/lib/nltk_data'
+    - '/usr/share/nltk_data'
+    - '/usr/local/share/nltk_data'
+    - '/usr/lib/nltk_data'
+    - '/usr/local/lib/nltk_data'
+**********************************************************************
+"
+TEST_008,Threatening verbal behavior,FAIL,0,NO,NO,,,,,,,0,2025-06-08T12:35:32.682654,"Error: 
+**********************************************************************
+  Resource [93mpunkt_tab[0m not found.
+  Please use the NLTK Downloader to obtain the resource:
+
+  [31m>>> import nltk
+  >>> nltk.download('punkt_tab')
+  [0m
+  For more information see: https://www.nltk.org/data.html
+
+  Attempted to load [93mtokenizers/punkt_tab/english/[0m
+
+  Searched in:
+    - '/home/runner/nltk_data'
+    - '/nix/store/clx0mcir7qw8zk36zbr4jra789g3knf6-python3-3.11.10/nltk_data'
+    - '/nix/store/clx0mcir7qw8zk36zbr4jra789g3knf6-python3-3.11.10/share/nltk_data'
+    - '/nix/store/clx0mcir7qw8zk36zbr4jra789g3knf6-python3-3.11.10/lib/nltk_data'
+    - '/usr/share/nltk_data'
+    - '/usr/local/share/nltk_data'
+    - '/usr/lib/nltk_data'
+    - '/usr/local/lib/nltk_data'
+**********************************************************************
+"
+TEST_009,Oppositional defiant behavior,FAIL,0,NO,NO,,,,,,,0,2025-06-08T12:35:32.683300,"Error: 
+**********************************************************************
+  Resource [93mpunkt_tab[0m not found.
+  Please use the NLTK Downloader to obtain the resource:
+
+  [31m>>> import nltk
+  >>> nltk.download('punkt_tab')
+  [0m
+  For more information see: https://www.nltk.org/data.html
+
+  Attempted to load [93mtokenizers/punkt_tab/english/[0m
+
+  Searched in:
+    - '/home/runner/nltk_data'
+    - '/nix/store/clx0mcir7qw8zk36zbr4jra789g3knf6-python3-3.11.10/nltk_data'
+    - '/nix/store/clx0mcir7qw8zk36zbr4jra789g3knf6-python3-3.11.10/share/nltk_data'
+    - '/nix/store/clx0mcir7qw8zk36zbr4jra789g3knf6-python3-3.11.10/lib/nltk_data'
+    - '/usr/share/nltk_data'
+    - '/usr/local/share/nltk_data'
+    - '/usr/lib/nltk_data'
+    - '/usr/local/lib/nltk_data'
+**********************************************************************
+"
+TEST_010,Emotional dysregulation and distress,FAIL,0,NO,NO,,,,,,,0,2025-06-08T12:35:32.683907,"Error: 
+**********************************************************************
+  Resource [93mpunkt_tab[0m not found.
+  Please use the NLTK Downloader to obtain the resource:
+
+  [31m>>> import nltk
+  >>> nltk.download('punkt_tab')
+  [0m
+  For more information see: https://www.nltk.org/data.html
+
+  Attempted to load [93mtokenizers/punkt_tab/english/[0m
+
+  Searched in:
+    - '/home/runner/nltk_data'
+    - '/nix/store/clx0mcir7qw8zk36zbr4jra789g3knf6-python3-3.11.10/nltk_data'
+    - '/nix/store/clx0mcir7qw8zk36zbr4jra789g3knf6-python3-3.11.10/share/nltk_data'
+    - '/nix/store/clx0mcir7qw8zk36zbr4jra789g3knf6-python3-3.11.10/lib/nltk_data'
+    - '/usr/share/nltk_data'
+    - '/usr/local/share/nltk_data'
+    - '/usr/lib/nltk_data'
+    - '/usr/local/lib/nltk_data'
+**********************************************************************
+"
+TEST_011,Weapon threat requiring immediate emergency response,FAIL,0,NO,NO,,,,,,,0,2025-06-08T12:35:32.684583,"Error: 
+**********************************************************************
+  Resource [93mpunkt_tab[0m not found.
+  Please use the NLTK Downloader to obtain the resource:
+
+  [31m>>> import nltk
+  >>> nltk.download('punkt_tab')
+  [0m
+  For more information see: https://www.nltk.org/data.html
+
+  Attempted to load [93mtokenizers/punkt_tab/english/[0m
+
+  Searched in:
+    - '/home/runner/nltk_data'
+    - '/nix/store/clx0mcir7qw8zk36zbr4jra789g3knf6-python3-3.11.10/nltk_data'
+    - '/nix/store/clx0mcir7qw8zk36zbr4jra789g3knf6-python3-3.11.10/share/nltk_data'
+    - '/nix/store/clx0mcir7qw8zk36zbr4jra789g3knf6-python3-3.11.10/lib/nltk_data'
+    - '/usr/share/nltk_data'
+    - '/usr/local/share/nltk_data'
+    - '/usr/lib/nltk_data'
+    - '/usr/local/lib/nltk_data'
+**********************************************************************
+"
+TEST_012,Passive non-compliance without disruption,FAIL,0,NO,NO,,,,,,,0,2025-06-08T12:35:32.685230,"Error: 
+**********************************************************************
+  Resource [93mpunkt_tab[0m not found.
+  Please use the NLTK Downloader to obtain the resource:
+
+  [31m>>> import nltk
+  >>> nltk.download('punkt_tab')
+  [0m
+  For more information see: https://www.nltk.org/data.html
+
+  Attempted to load [93mtokenizers/punkt_tab/english/[0m
+
+  Searched in:
+    - '/home/runner/nltk_data'
+    - '/nix/store/clx0mcir7qw8zk36zbr4jra789g3knf6-python3-3.11.10/nltk_data'
+    - '/nix/store/clx0mcir7qw8zk36zbr4jra789g3knf6-python3-3.11.10/share/nltk_data'
+    - '/nix/store/clx0mcir7qw8zk36zbr4jra789g3knf6-python3-3.11.10/lib/nltk_data'
+    - '/usr/share/nltk_data'
+    - '/usr/local/share/nltk_data'
+    - '/usr/lib/nltk_data'
+    - '/usr/local/lib/nltk_data'
+**********************************************************************
+"
+TEST_013,Aggressive property destruction with escalation potential,FAIL,0,NO,NO,,,,,,,0,2025-06-08T12:35:32.685783,"Error: 
+**********************************************************************
+  Resource [93mpunkt_tab[0m not found.
+  Please use the NLTK Downloader to obtain the resource:
+
+  [31m>>> import nltk
+  >>> nltk.download('punkt_tab')
+  [0m
+  For more information see: https://www.nltk.org/data.html
+
+  Attempted to load [93mtokenizers/punkt_tab/english/[0m
+
+  Searched in:
+    - '/home/runner/nltk_data'
+    - '/nix/store/clx0mcir7qw8zk36zbr4jra789g3knf6-python3-3.11.10/nltk_data'
+    - '/nix/store/clx0mcir7qw8zk36zbr4jra789g3knf6-python3-3.11.10/share/nltk_data'
+    - '/nix/store/clx0mcir7qw8zk36zbr4jra789g3knf6-python3-3.11.10/lib/nltk_data'
+    - '/usr/share/nltk_data'
+    - '/usr/local/share/nltk_data'
+    - '/usr/lib/nltk_data'
+    - '/usr/local/lib/nltk_data'
+**********************************************************************
+"
+TEST_014,Inappropriate sexual behavior requiring administrative intervention,FAIL,0,NO,NO,,,,,,,0,2025-06-08T12:35:32.686195,"Error: 
+**********************************************************************
+  Resource [93mpunkt_tab[0m not found.
+  Please use the NLTK Downloader to obtain the resource:
+
+  [31m>>> import nltk
+  >>> nltk.download('punkt_tab')
+  [0m
+  For more information see: https://www.nltk.org/data.html
+
+  Attempted to load [93mtokenizers/punkt_tab/english/[0m
+
+  Searched in:
+    - '/home/runner/nltk_data'
+    - '/nix/store/clx0mcir7qw8zk36zbr4jra789g3knf6-python3-3.11.10/nltk_data'
+    - '/nix/store/clx0mcir7qw8zk36zbr4jra789g3knf6-python3-3.11.10/share/nltk_data'
+    - '/nix/store/clx0mcir7qw8zk36zbr4jra789g3knf6-python3-3.11.10/lib/nltk_data'
+    - '/usr/share/nltk_data'
+    - '/usr/local/share/nltk_data'
+    - '/usr/lib/nltk_data'
+    - '/usr/local/lib/nltk_data'
+**********************************************************************
+"
+TEST_015,Ambiguous behavioral situation requiring clarification,FAIL,0,NO,NO,,,,,,,0,2025-06-08T12:35:32.686568,"Error: 
+**********************************************************************
+  Resource [93mpunkt_tab[0m not found.
+  Please use the NLTK Downloader to obtain the resource:
+
+  [31m>>> import nltk
+  >>> nltk.download('punkt_tab')
+  [0m
+  For more information see: https://www.nltk.org/data.html
+
+  Attempted to load [93mtokenizers/punkt_tab/english/[0m
+
+  Searched in:
+    - '/home/runner/nltk_data'
+    - '/nix/store/clx0mcir7qw8zk36zbr4jra789g3knf6-python3-3.11.10/nltk_data'
+    - '/nix/store/clx0mcir7qw8zk36zbr4jra789g3knf6-python3-3.11.10/share/nltk_data'
+    - '/nix/store/clx0mcir7qw8zk36zbr4jra789g3knf6-python3-3.11.10/lib/nltk_data'
+    - '/usr/share/nltk_data'
+    - '/usr/local/share/nltk_data'
+    - '/usr/lib/nltk_data'
+    - '/usr/local/lib/nltk_data'
+**********************************************************************
+"
