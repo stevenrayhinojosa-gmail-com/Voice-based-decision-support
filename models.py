@@ -152,3 +152,128 @@ class Recommendation(db.Model):
     
     def __repr__(self):
         return f'<Recommendation {self.title}>'
+
+class Student(db.Model):
+    """Model for student information and BIP tracking"""
+    id = db.Column(db.Integer, primary_key=True)
+    student_id = db.Column(db.String(50), unique=True, nullable=False)
+    first_name = db.Column(db.String(100), nullable=False)
+    last_name = db.Column(db.String(100), nullable=False)
+    grade_level = db.Column(db.String(20), nullable=True)
+    classroom = db.Column(db.String(50), nullable=True)
+    has_bip = db.Column(db.Boolean, default=False)
+    bip_details = db.Column(db.Text, nullable=True)  # JSON string of BIP strategies
+    emergency_contact = db.Column(db.String(200), nullable=True)
+    medical_notes = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    incidents = db.relationship('BehaviorIncident', backref='student', lazy=True)
+    
+    def __repr__(self):
+        return f'<Student {self.first_name} {self.last_name}>'
+
+class BehaviorIncident(db.Model):
+    """Model for storing individual behavior incidents"""
+    id = db.Column(db.Integer, primary_key=True)
+    incident_id = db.Column(db.String(100), unique=True, nullable=False)
+    session_id = db.Column(db.String(100), nullable=False)
+    student_id = db.Column(db.Integer, db.ForeignKey('student.id'), nullable=True)
+    
+    # Incident details
+    behavior_description = db.Column(db.Text, nullable=False)
+    behavior_type = db.Column(db.String(50), nullable=True)
+    severity_level = db.Column(db.String(20), nullable=False)
+    location = db.Column(db.String(100), nullable=False)
+    
+    # Environmental context
+    time_period = db.Column(db.String(50), nullable=True)
+    noise_level_db = db.Column(db.Float, nullable=True)
+    is_transition_period = db.Column(db.Boolean, default=False)
+    
+    # Crisis management
+    is_crisis = db.Column(db.Boolean, default=False)
+    crisis_alert_sent = db.Column(db.Boolean, default=False)
+    protocol_used_id = db.Column(db.Integer, db.ForeignKey('protocol.id'), nullable=True)
+    
+    # Timeline
+    start_time = db.Column(db.DateTime, nullable=False)
+    end_time = db.Column(db.DateTime, nullable=True)
+    duration_minutes = db.Column(db.Integer, nullable=True)
+    
+    # Outcomes
+    outcome = db.Column(db.Text, nullable=True)
+    recommendations_given = db.Column(db.Text, nullable=True)  # JSON array of recommendations
+    teacher_feedback = db.Column(db.String(20), nullable=True)  # thumbs_up/thumbs_down
+    feedback_comment = db.Column(db.Text, nullable=True)
+    
+    # Analytics support
+    keywords = db.Column(db.Text, nullable=True)  # JSON array of extracted keywords
+    confidence_scores = db.Column(db.Text, nullable=True)  # JSON object of NLP confidence scores
+    clarification_prompted = db.Column(db.Boolean, default=False)
+    clarification_response = db.Column(db.Text, nullable=True)
+    
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    protocol_used = db.relationship('Protocol', backref='incidents', lazy=True)
+    interactions = db.relationship('IncidentInteraction', backref='incident', lazy=True, cascade='all, delete-orphan')
+    
+    def __repr__(self):
+        return f'<BehaviorIncident {self.incident_id}>'
+
+class IncidentInteraction(db.Model):
+    """Model for tracking interactions during an incident"""
+    id = db.Column(db.Integer, primary_key=True)
+    incident_id = db.Column(db.Integer, db.ForeignKey('behavior_incident.id'), nullable=False)
+    interaction_type = db.Column(db.String(50), nullable=False)  # voice_input, recommendation, clarification, etc.
+    content = db.Column(db.Text, nullable=False)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    interaction_metadata = db.Column(db.Text, nullable=True)  # JSON for additional data
+    
+    def __repr__(self):
+        return f'<IncidentInteraction {self.interaction_type}>'
+
+class ProtocolKeyword(db.Model):
+    """Model for mapping keywords to protocols for NLP analysis"""
+    id = db.Column(db.Integer, primary_key=True)
+    protocol_id = db.Column(db.Integer, db.ForeignKey('protocol.id'), nullable=False)
+    keyword = db.Column(db.String(100), nullable=False)
+    weight = db.Column(db.Float, default=1.0)  # Importance weight for this keyword
+    language = db.Column(db.String(10), default='en')  # Language code
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    protocol = db.relationship('Protocol', backref='keywords', lazy=True)
+    
+    def __repr__(self):
+        return f'<ProtocolKeyword {self.keyword}>'
+
+class BehaviorTrend(db.Model):
+    """Model for storing aggregated behavior trend data"""
+    id = db.Column(db.Integer, primary_key=True)
+    student_id = db.Column(db.Integer, db.ForeignKey('student.id'), nullable=True)
+    behavior_type = db.Column(db.String(50), nullable=False)
+    date = db.Column(db.Date, nullable=False)
+    
+    # Aggregated metrics
+    incident_count = db.Column(db.Integer, default=0)
+    total_duration_minutes = db.Column(db.Integer, default=0)
+    average_severity = db.Column(db.Float, nullable=True)
+    crisis_count = db.Column(db.Integer, default=0)
+    
+    # Environmental patterns
+    peak_time_period = db.Column(db.String(50), nullable=True)
+    average_noise_level = db.Column(db.Float, nullable=True)
+    transition_incident_count = db.Column(db.Integer, default=0)
+    
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    student = db.relationship('Student', backref='behavior_trends', lazy=True)
+    
+    def __repr__(self):
+        return f'<BehaviorTrend {self.behavior_type} {self.date}>'

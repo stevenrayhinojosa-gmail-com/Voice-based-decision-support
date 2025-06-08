@@ -20,6 +20,7 @@ from teacher_encouragement import TeacherEncouragementSystem
 from student_manager import StudentManager
 from localization import localization_manager, get_localized_phrase
 from voice_clarification import voice_clarification_system
+from database_migration import DatabaseMigrationService
 
 # Helper class for JSON serialization of SQLAlchemy objects
 class AlchemyEncoder(json.JSONEncoder):
