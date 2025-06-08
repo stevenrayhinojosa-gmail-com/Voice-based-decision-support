@@ -970,8 +970,8 @@ def voice_capture():
         # Log the context data
         logger.info(f"Context data during voice input: Time: {time_period}, Noise: {noise_level}dB, Is Transition: {is_transition}")
         
-        # Check for "crisis is over" command
-        crisis_over_phrases = ['crisis is over', 'crisis over', 'incident is over', 'incident over', 'situation resolved']
+        # Check for "crisis is over" command in multiple languages
+        crisis_over_phrases = localization_manager.get_voice_commands().get('crisis_over', [])
         is_crisis_end = any(phrase in speech_text.lower() for phrase in crisis_over_phrases)
         
         # Get session ID for incident tracking
@@ -982,6 +982,7 @@ def voice_capture():
             # End the incident and generate report
             report_result = incident_reporter.end_incident(session_id, outcome="resolved")
             
+            localized_message = get_localized_phrase("crisis_over")
             return jsonify({
                 "success": True,
                 "crisis_ended": True,
@@ -991,7 +992,8 @@ def voice_capture():
                     "filename": report_result.get("report_filename"),
                     "incident_id": report_result.get("incident_id")
                 },
-                "message": "Crisis ended. Incident report generated and emailed."
+                "message": localized_message,
+                "current_language": localization_manager.current_language
             })
         
         # Check for student identification in speech
@@ -1472,6 +1474,122 @@ def test_student_analytics(student_id):
         
     except Exception as e:
         logger.error(f"Error testing student analytics: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/language_status')
+def language_status():
+    """Get current language status and available commands"""
+    try:
+        return jsonify({
+            'success': True,
+            'current_language': localization_manager.current_language,
+            'supported_languages': localization_manager.supported_languages,
+            'voice_commands': localization_manager.get_voice_commands(),
+            'sample_phrases': {
+                'crisis_detected': get_localized_phrase('crisis_detected'),
+                'stay_calm': get_localized_phrase('stay_calm'),
+                'feedback_request': get_localized_phrase('feedback_request'),
+                'encouragement': localization_manager.get_encouragement()
+            }
+        })
+    except Exception as e:
+        logger.error(f"Error getting language status: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/test_language_switch', methods=['POST'])
+def test_language_switch():
+    """Test language switching functionality"""
+    try:
+        command = request.json.get('command', 'switch to spanish')
+        detected_language = localization_manager.detect_language_switch(command)
+        
+        if detected_language:
+            localization_manager.set_language(detected_language)
+            response_message = get_localized_phrase("language_switched")
+            
+            return jsonify({
+                'success': True,
+                'command_tested': command,
+                'detected_language': detected_language,
+                'switched_to': localization_manager.current_language,
+                'response_message': response_message,
+                'sample_responses': {
+                    'crisis_detected': get_localized_phrase('crisis_detected'),
+                    'stay_calm': get_localized_phrase('stay_calm'),
+                    'student_identified': get_localized_phrase('student_identified', 
+                                                             name='María García', 
+                                                             bip_status=get_localized_phrase('has_bip')),
+                    'encouragement': localization_manager.get_encouragement()
+                }
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'command_tested': command,
+                'error': 'Language switch command not recognized',
+                'current_language': localization_manager.current_language
+            })
+            
+    except Exception as e:
+        logger.error(f"Error testing language switch: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/test_multilingual_responses')
+def test_multilingual_responses():
+    """Test various system responses in both languages"""
+    try:
+        responses = {}
+        
+        for lang in ['en', 'es']:
+            localization_manager.set_language(lang)
+            
+            responses[lang] = {
+                'language_name': 'English' if lang == 'en' else 'Español',
+                'crisis_responses': {
+                    'crisis_detected': get_localized_phrase('crisis_detected'),
+                    'stay_calm': get_localized_phrase('stay_calm'),
+                    'safety_first': get_localized_phrase('safety_first'),
+                    'crisis_over': get_localized_phrase('crisis_over')
+                },
+                'student_responses': {
+                    'student_with_bip': get_localized_phrase('student_identified', 
+                                                           name='Alex Johnson', 
+                                                           bip_status=get_localized_phrase('has_bip')),
+                    'student_no_bip': get_localized_phrase('student_identified', 
+                                                         name='Sarah Wilson', 
+                                                         bip_status=get_localized_phrase('no_bip'))
+                },
+                'behavior_types': {
+                    'disruption': localization_manager.localize_behavior_type('disruption'),
+                    'aggression': localization_manager.localize_behavior_type('aggression'),
+                    'defiance': localization_manager.localize_behavior_type('defiance')
+                },
+                'severity_levels': {
+                    'low': localization_manager.localize_severity('low'),
+                    'medium': localization_manager.localize_severity('medium'),
+                    'high': localization_manager.localize_severity('high')
+                },
+                'encouragement': localization_manager.get_encouragement(),
+                'voice_commands': localization_manager.get_voice_commands()
+            }
+        
+        return jsonify({
+            'success': True,
+            'responses_by_language': responses,
+            'current_language': localization_manager.current_language
+        })
+        
+    except Exception as e:
+        logger.error(f"Error testing multilingual responses: {e}")
         return jsonify({
             'success': False,
             'error': str(e)
