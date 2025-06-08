@@ -19,6 +19,7 @@ from feedback_system import TeacherFeedbackSystem
 from teacher_encouragement import TeacherEncouragementSystem
 from student_manager import StudentManager
 from localization import localization_manager, get_localized_phrase
+from voice_clarification import voice_clarification_system
 
 # Helper class for JSON serialization of SQLAlchemy objects
 class AlchemyEncoder(json.JSONEncoder):
@@ -999,12 +1000,99 @@ def voice_capture():
         # Check for student identification in speech
         student_info = student_manager.identify_student_from_speech(speech_text)
         
-        # Process keywords and emergency detection
-        keywords = extract_keywords_from_speech(speech_text)
+        # Check if this is a response to a clarification prompt
+        clarification_context = session.get('pending_clarification')
+        if clarification_context:
+            # Process clarification response
+            clarification_result = voice_clarification_system.process_clarification_response(
+                clarification_context, speech_text
+            )
+            
+            # Clear pending clarification
+            session.pop('pending_clarification', None)
+            
+            if clarification_result['success']:
+                # Apply updates from clarification and continue processing
+                updates = clarification_result['updates']
+                
+                # Log clarification interaction
+                if incident_reporter.has_active_incident(session_id):
+                    incident_reporter.log_interaction(
+                        session_id, 
+                        'clarification_response', 
+                        f"Q: {clarification_context['prompt_text']} A: {speech_text}"
+                    )
+                
+                return jsonify({
+                    "success": True,
+                    "clarification_processed": True,
+                    "updates_applied": updates,
+                    "clarification_log": clarification_result['clarification_log'],
+                    "message": get_localized_phrase("analyzing"),
+                    "current_language": localization_manager.current_language
+                })
+            else:
+                # Clarification failed, ask for clearer response
+                return jsonify({
+                    "success": False,
+                    "clarification_failed": True,
+                    "error": clarification_result['error'],
+                    "message": clarification_result.get('suggested_prompt', 
+                                                       get_localized_phrase('error_processing')),
+                    "current_language": localization_manager.current_language
+                })
         
-        # Determine if emergency based on keywords and context
-        is_emergency = ('emergency' in speech_text.lower() or 'urgent' in speech_text.lower() or 
-                      'immediate' in speech_text.lower() or 'danger' in speech_text.lower())
+        # Process keywords and emergency detection with NLP analysis
+        from advanced_nlp import BehaviorQueryProcessor
+        nlp_processor = BehaviorQueryProcessor()
+        nlp_analysis = nlp_processor.process_teacher_query(speech_text)
+        
+        keywords = nlp_analysis.get('keywords', [])
+        is_emergency = nlp_analysis.get('is_emergency', False)
+        
+        # Check if clarification is needed based on NLP confidence
+        if nlp_analysis.get('needs_clarification', False):
+            clarification_needed = voice_clarification_system.needs_clarification(nlp_analysis)
+            
+            if clarification_needed:
+                # Generate clarification prompt
+                clarification_prompt = voice_clarification_system.get_clarification_prompt(
+                    clarification_needed['type'], 
+                    context={'keywords': keywords, 'description': speech_text}
+                )
+                
+                if clarification_prompt:
+                    # Store clarification context in session
+                    session['pending_clarification'] = clarification_prompt
+                    
+                    # Log clarification request
+                    if incident_reporter.has_active_incident(session_id):
+                        incident_reporter.log_interaction(
+                            session_id, 
+                            'clarification_requested', 
+                            f"Low confidence ({clarification_needed['confidence']:.2f}) - {clarification_prompt['prompt_text']}"
+                        )
+                    
+                    status_message = voice_clarification_system.get_clarification_status_message(
+                        clarification_needed['type']
+                    )
+                    
+                    return jsonify({
+                        "success": True,
+                        "clarification_needed": True,
+                        "clarification_type": clarification_needed['type'],
+                        "confidence": clarification_needed['confidence'],
+                        "reason": clarification_needed['reason'],
+                        "status_message": status_message,
+                        "prompt": clarification_prompt['prompt_text'],
+                        "message": f"{status_message} {clarification_prompt['prompt_text']}",
+                        "current_language": localization_manager.current_language
+                    })
+        
+        # Continue with original emergency detection as fallback
+        if not is_emergency:
+            is_emergency = ('emergency' in speech_text.lower() or 'urgent' in speech_text.lower() or 
+                          'immediate' in speech_text.lower() or 'danger' in speech_text.lower())
         
         # Adjust emergency detection based on context
         # Higher noise levels or transition periods might lead to misinterpretations
@@ -1590,6 +1678,170 @@ def test_multilingual_responses():
         
     except Exception as e:
         logger.error(f"Error testing multilingual responses: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/test_voice_clarification', methods=['POST'])
+def test_voice_clarification():
+    """Test voice clarification system with ambiguous scenarios"""
+    try:
+        test_scenario = request.json.get('scenario', 'low_confidence_behavior')
+        
+        # Predefined test scenarios with low confidence
+        test_scenarios = {
+            'low_confidence_behavior': {
+                'speech_text': "The student is doing something disruptive but I'm not sure what exactly",
+                'expected_clarification': 'behavior_type',
+                'description': 'Ambiguous behavior description requiring clarification'
+            },
+            'unclear_severity': {
+                'speech_text': "There's some kind of issue with the student",
+                'expected_clarification': 'severity',
+                'description': 'Unclear severity level requiring assessment'
+            },
+            'potential_emergency': {
+                'speech_text': "Something might be wrong, the student seems upset",
+                'expected_clarification': 'emergency',
+                'description': 'Uncertain emergency status requiring confirmation'
+            },
+            'physical_contact_unclear': {
+                'speech_text': "The student was near another student and now they're upset",
+                'expected_clarification': 'behavior_type',
+                'description': 'Unclear if physical contact occurred'
+            },
+            'escalation_uncertain': {
+                'speech_text': "The behavior seems to be changing but I can't tell if it's getting worse",
+                'expected_clarification': 'severity',
+                'description': 'Uncertain about behavior escalation'
+            }
+        }
+        
+        if test_scenario not in test_scenarios:
+            return jsonify({
+                'success': False,
+                'error': f'Unknown test scenario: {test_scenario}',
+                'available_scenarios': list(test_scenarios.keys())
+            }), 400
+        
+        scenario_data = test_scenarios[test_scenario]
+        speech_text = scenario_data['speech_text']
+        
+        # Process with NLP to generate low confidence analysis
+        from advanced_nlp import BehaviorQueryProcessor
+        nlp_processor = BehaviorQueryProcessor()
+        nlp_analysis = nlp_processor.process_teacher_query(speech_text)
+        
+        # Simulate low confidence for testing by checking if clarification is needed
+        clarification_needed = voice_clarification_system.needs_clarification({
+            'confidence': {
+                'behavior_type': 0.4,
+                'severity': 0.4,
+                'emergency': 0.4
+            }
+        })
+        
+        if clarification_needed:
+            # Generate clarification prompt
+            clarification_prompt = voice_clarification_system.get_clarification_prompt(
+                clarification_needed['type'],
+                context={'keywords': nlp_analysis.get('keywords', []), 'description': speech_text}
+            )
+            
+            return jsonify({
+                'success': True,
+                'test_scenario': test_scenario,
+                'scenario_description': scenario_data['description'],
+                'original_speech': speech_text,
+                'nlp_analysis': nlp_analysis,
+                'clarification_needed': clarification_needed,
+                'clarification_prompt': clarification_prompt,
+                'expected_clarification_type': scenario_data['expected_clarification'],
+                'test_result': 'PASS' if clarification_needed['type'] == scenario_data['expected_clarification'] else 'FAIL'
+            })
+        else:
+            return jsonify({
+                'success': True,
+                'test_scenario': test_scenario,
+                'scenario_description': scenario_data['description'],
+                'original_speech': speech_text,
+                'nlp_analysis': nlp_analysis,
+                'clarification_needed': None,
+                'test_result': 'FAIL - No clarification triggered when expected'
+            })
+        
+    except Exception as e:
+        logger.error(f"Error testing voice clarification: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/test_clarification_response', methods=['POST'])
+def test_clarification_response():
+    """Test processing of clarification responses"""
+    try:
+        clarification_type = request.json.get('clarification_type', 'behavior_type')
+        prompt_key = request.json.get('prompt_key', 'aggression_physical')
+        response_text = request.json.get('response', 'yes')
+        
+        # Create mock clarification context
+        clarification_context = {
+            'prompt_type': clarification_type,
+            'prompt_key': prompt_key,
+            'prompt_text': f"Test prompt for {clarification_type}:{prompt_key}",
+            'language': localization_manager.current_language
+        }
+        
+        # Process the response
+        clarification_result = voice_clarification_system.process_clarification_response(
+            clarification_context, response_text
+        )
+        
+        return jsonify({
+            'success': True,
+            'clarification_context': clarification_context,
+            'response_text': response_text,
+            'processing_result': clarification_result,
+            'test_status': 'PASS' if clarification_result['success'] else 'FAIL'
+        })
+        
+    except Exception as e:
+        logger.error(f"Error testing clarification response: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/clarification_status')
+def clarification_status():
+    """Get current clarification system status and configuration"""
+    try:
+        from voice_clarification import NLP_CONFIDENCE_THRESHOLD
+        
+        return jsonify({
+            'success': True,
+            'system_status': 'active',
+            'confidence_threshold': NLP_CONFIDENCE_THRESHOLD,
+            'supported_clarification_types': ['behavior_type', 'severity', 'emergency'],
+            'current_language': localization_manager.current_language,
+            'available_prompts': {
+                'behavior_type': list(voice_clarification_system.clarification_prompts['behavior_type'].keys()),
+                'severity': list(voice_clarification_system.clarification_prompts['severity'].keys()),
+                'emergency': list(voice_clarification_system.clarification_prompts['emergency'].keys())
+            },
+            'sample_scenarios': [
+                'low_confidence_behavior',
+                'unclear_severity', 
+                'potential_emergency',
+                'physical_contact_unclear',
+                'escalation_uncertain'
+            ]
+        })
+        
+    except Exception as e:
+        logger.error(f"Error getting clarification status: {e}")
         return jsonify({
             'success': False,
             'error': str(e)
