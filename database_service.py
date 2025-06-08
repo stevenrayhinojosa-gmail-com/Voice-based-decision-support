@@ -90,14 +90,17 @@ class ProtocolDatabaseService:
         ).first()
         
         if behavior_protocol:
-            return behavior_protocol.protocol
+            return Protocol.query.get(behavior_protocol.protocol_id)
         
         # Fallback to any protocol for this behavior
         behavior_protocol = BehaviorProtocol.query.filter_by(
             behavior_type_id=behavior.id
         ).first()
         
-        return behavior_protocol.protocol if behavior_protocol else None
+        if behavior_protocol:
+            return Protocol.query.get(behavior_protocol.protocol_id)
+        
+        return None
 
 class BehaviorDatabaseService:
     """Service for managing behavior data in PostgreSQL"""

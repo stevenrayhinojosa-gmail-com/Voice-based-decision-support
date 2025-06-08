@@ -1847,3 +1847,212 @@ def clarification_status():
             'success': False,
             'error': str(e)
         }), 500
+
+@app.route('/run_database_migration', methods=['POST'])
+def run_database_migration():
+    """Run PostgreSQL database migration to import behavioral data and protocols"""
+    try:
+        migration_service = DatabaseMigrationService()
+        
+        # Check if migration has already been run
+        existing_protocols = Protocol.query.count()
+        existing_students = Student.query.count()
+        existing_behavior_types = BehaviorType.query.count()
+        
+        if existing_protocols > 0 or existing_students > 0 or existing_behavior_types > 0:
+            return jsonify({
+                'success': True,
+                'message': 'Database already populated',
+                'existing_data': {
+                    'protocols': existing_protocols,
+                    'students': existing_students,
+                    'behavior_types': existing_behavior_types
+                }
+            })
+        
+        # Run full migration
+        migration_service.run_full_migration()
+        
+        # Get final counts
+        final_protocols = Protocol.query.count()
+        final_students = Student.query.count()
+        final_behavior_types = BehaviorType.query.count()
+        final_mappings = BehaviorProtocol.query.count()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Database migration completed successfully',
+            'imported_data': {
+                'protocols': final_protocols,
+                'students': final_students,
+                'behavior_types': final_behavior_types,
+                'behavior_protocol_mappings': final_mappings
+            }
+        })
+        
+    except Exception as e:
+        logger.error(f"Error running database migration: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/database_status')
+def database_status():
+    """Get current PostgreSQL database status and content summary"""
+    try:
+        # Count all data in database
+        protocols_count = Protocol.query.count()
+        students_count = Student.query.count()
+        behavior_types_count = BehaviorType.query.count()
+        incidents_count = BehaviorIncident.query.count()
+        mappings_count = BehaviorProtocol.query.count()
+        trends_count = BehaviorTrend.query.count()
+        
+        # Get sample data
+        sample_protocols = Protocol.query.limit(3).all()
+        sample_students = Student.query.limit(3).all()
+        sample_behavior_types = BehaviorType.query.limit(3).all()
+        
+        # Get recent incidents
+        recent_incidents = BehaviorIncident.query.order_by(
+            BehaviorIncident.created_at.desc()
+        ).limit(5).all()
+        
+        return jsonify({
+            'success': True,
+            'database_summary': {
+                'protocols': protocols_count,
+                'students': students_count,
+                'behavior_types': behavior_types_count,
+                'incidents': incidents_count,
+                'behavior_protocol_mappings': mappings_count,
+                'behavior_trends': trends_count
+            },
+            'sample_data': {
+                'protocols': [{'id': p.id, 'name': p.name, 'category': p.category} for p in sample_protocols],
+                'students': [{'id': s.student_id, 'name': f"{s.first_name} {s.last_name}", 'has_bip': s.has_bip} for s in sample_students],
+                'behavior_types': [{'id': bt.id, 'name': bt.name, 'category': bt.category} for bt in sample_behavior_types]
+            },
+            'recent_activity': {
+                'recent_incidents': [
+                    {
+                        'incident_id': i.incident_id,
+                        'behavior_type': i.behavior_type,
+                        'severity': i.severity_level,
+                        'timestamp': i.created_at.isoformat(),
+                        'is_crisis': i.is_crisis
+                    } for i in recent_incidents
+                ]
+            }
+        })
+        
+    except Exception as e:
+        logger.error(f"Error getting database status: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/test_database_integration', methods=['POST'])
+def test_database_integration():
+    """Test PostgreSQL database integration by creating sample incident"""
+    try:
+        from database_service import behavior_service, student_service, protocol_service
+        import uuid
+        
+        # Create a test incident
+        test_incident_data = {
+            'incident_id': f"TEST_{uuid.uuid4().hex[:8]}",
+            'session_id': f"SESSION_{uuid.uuid4().hex[:8]}",
+            'behavior_description': 'Test incident to verify database integration',
+            'behavior_type': 'Disruption',
+            'severity_level': 'medium',
+            'location': 'Test Classroom',
+            'start_time': datetime.utcnow(),
+            'time_period': 'test-period',
+            'noise_level_db': -45.0,
+            'is_transition_period': False,
+            'is_crisis': False,
+            'keywords': ['test', 'database', 'integration'],
+            'confidence_scores': {
+                'behavior_type': 0.9,
+                'severity': 0.8,
+                'emergency': 0.1
+            },
+            'clarification_prompted': False
+        }
+        
+        # Try to link to a student
+        students = student_service.get_all_students()
+        if students:
+            test_incident_data['student_id'] = students[0].student_id
+        
+        # Try to find appropriate protocol
+        protocol = protocol_service.get_protocol_for_behavior('Disruption', 'medium')
+        if protocol:
+            test_incident_data['protocol_used_id'] = protocol.id
+        
+        # Create incident
+        incident = behavior_service.create_behavior_incident(test_incident_data)
+        
+        # Add test interaction
+        interaction_data = {
+            'interaction_type': 'test_voice_input',
+            'content': 'This is a test voice input to verify database integration',
+            'metadata': {'test': True, 'source': 'database_integration_test'}
+        }
+        
+        interaction = behavior_service.add_incident_interaction(
+            incident.incident_id, 
+            interaction_data
+        )
+        
+        # Complete the incident
+        outcome_data = {
+            'end_time': datetime.utcnow(),
+            'duration_minutes': 5,
+            'outcome': 'Test incident completed successfully',
+            'recommendations_given': ['Database integration working correctly'],
+            'teacher_feedback': 'thumbs_up',
+            'feedback_comment': 'Database test successful'
+        }
+        
+        updated_incident = behavior_service.update_incident_outcome(
+            incident.incident_id,
+            outcome_data
+        )
+        
+        # Verify retrieval
+        retrieved_incident = behavior_service.get_incident_by_id(incident.incident_id)
+        
+        return jsonify({
+            'success': True,
+            'message': 'Database integration test completed successfully',
+            'test_results': {
+                'incident_created': {
+                    'incident_id': incident.incident_id,
+                    'student_linked': incident.student_id is not None,
+                    'protocol_linked': incident.protocol_used_id is not None
+                },
+                'interaction_added': {
+                    'interaction_id': interaction.id,
+                    'type': interaction.interaction_type
+                },
+                'incident_updated': {
+                    'outcome_recorded': updated_incident.outcome is not None,
+                    'feedback_recorded': updated_incident.teacher_feedback is not None
+                },
+                'data_retrieval': {
+                    'incident_retrieved': retrieved_incident is not None,
+                    'interactions_count': len(retrieved_incident.interactions) if retrieved_incident else 0
+                }
+            }
+        })
+        
+    except Exception as e:
+        logger.error(f"Error testing database integration: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
